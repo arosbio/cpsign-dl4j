@@ -1,0 +1,6 @@
+# CLASSIFICATION
+com.arosbio.ml.dl4j.DL4JMultiLayerClassifier
+
+
+# REGRESSION
+com.arosbio.ml.dl4j.DL4JMultiLayerRegressor
