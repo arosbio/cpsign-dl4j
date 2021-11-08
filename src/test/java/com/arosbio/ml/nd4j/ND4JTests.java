@@ -1,14 +1,13 @@
 package com.arosbio.ml.nd4j;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.io.IOUtils;
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
 import org.junit.Assert;
 import org.junit.Test;
@@ -23,9 +22,9 @@ import com.arosbio.modeling.data.DataUtils;
 //import com.arosbio.testutils.TestUtils;
 import com.arosbio.modeling.data.Dataset.SubSet;
 import com.arosbio.modeling.data.FeatureVector;
+import com.arosbio.modeling.data.SparseFeature;
 import com.arosbio.modeling.data.SparseFeatureImpl;
 import com.arosbio.modeling.data.SparseVector;
-import com.arosbio.modeling.data.io.LIBSVMFormat;
 
 import test_utils.UnitTestBase;
 
@@ -33,22 +32,27 @@ public class ND4JTests extends UnitTestBase {
 
 
 	@Test
-	public void checkOneHot() {
+	public void checkOneHotConversion() {
 
-		System.err.println(ND4JUtil.toOneHot(Arrays.asList(5d,3d,1d,0d)));
+		Map<Double,Integer> generated = ND4JUtil.toOneHot(Arrays.asList(5d,3d,1d,0d)); 
+		// Expected is to get all labels in order
+		Map<Double,Integer> expected = new HashMap<>();
+		expected.put(0d, 0);
+		expected.put(1d, 1);
+		expected.put(3d, 2);
+		expected.put(5d, 3);
+		
+		Assert.assertEquals(expected,generated);
 	}
 
 	@Test
 	public void createNDArray() {
 		INDArray arr = Nd4j.zeros(2,2);
-		System.err.println(arr.shapeInfoToString());
-		System.err.println(arr);
+		Assert.assertEquals(2, arr.rank());
 		arr.putScalar(0, 1, 2.0);
-
-		//		INDArray firstRo = arr.getRow(0);
-		//		System.err.println(firstRo);
-		//		firstRo.getRow(1).addi(3d);
-		System.err.println(arr);
+		
+		Assert.assertEquals(2d, arr.getDouble(0,1),0.0001);
+//		System.err.println(arr);
 	}
 
 	@Test
@@ -95,32 +99,29 @@ public class ND4JTests extends UnitTestBase {
 
 		List<DataRecord> recs = data.subList(0, 20);
 		DataConverter converter = DataConverter.regression(recs);
-		System.err.println(converter.getFeaturesMatrix());
-		System.err.println(converter.getLabelsMatrix());
+//		System.err.println(converter.getFeaturesMatrix());
+//		System.err.println(converter.getLabelsMatrix());
 		
 		// CHECK FEATURES
 		// Loop records
 		for (int i = 0; i<recs.size(); i ++) {
 			DataRecord r = recs.get(i);
 			INDArray arr = converter.getFeaturesMatrix().getRow(i);
-			assertEquals(arr, r.getFeatures());
+			assertEqualsFloat(arr, r.getFeatures());
 			
 		}
 		
 		
 		// CHECK LABELS - here it should be a column-vector only
-//		Map<Double,Integer> lbls = DataUtils.countLabels(recs);
 		
 		INDArray labelsMatrix = converter.getLabelsMatrix();
 		
 		Assert.assertEquals(1, labelsMatrix.size(1));
-//		List<Double> ls = new ArrayList<>(lbls.keySet());
-//		Collections.sort(ls);
 		
 		for (int i = 0; i<recs.size(); i ++) {
 //			System.err.println("r.label="+recs.get(i).getLabel() + " labelMatrix.label="+labelsMatrix.getRow(i));
 			double lCpsign = recs.get(i).getLabel();
-			double lNd4j = labelsMatrix.getDouble(new int[] {i,0});
+			double lNd4j = labelsMatrix.getDouble(i,0);
 			Assert.assertEquals(lCpsign, lNd4j, 0.0001);
 		}
 		
@@ -145,8 +146,13 @@ public class ND4JTests extends UnitTestBase {
 	
 	@Test
 	public void testToArray() {
-		INDArray arr = ND4JUtil.toArray(new SparseVector(Arrays.asList(new SparseFeatureImpl(0, 4.5), new SparseFeatureImpl(4, 5.6))), 7);
-		System.err.println(arr);
+		List<SparseFeature> list = Arrays.asList(new SparseFeatureImpl(0, 4.5), new SparseFeatureImpl(4, 5.6));
+		FeatureVector fv = new SparseVector(list);
+		INDArray arr = ND4JUtil.toArray(fv, 7);
+		Assert.assertEquals(1, arr.rows());
+		Assert.assertEquals(7, arr.size(1));
+		
+//		System.err.println(arr);
 	}
 
 	public static void assertEquals(INDArray arr, FeatureVector v) {
@@ -163,8 +169,22 @@ public class ND4JTests extends UnitTestBase {
 
 	}
 	
-	@Test
-	public void playWithAPI() {
+	public static void assertEqualsFloat(INDArray arr, FeatureVector v) {
+//		Nd4j.setDataType(DataType.dou);
+		// Check all features
+		for (int i = 0; i < arr.size(0); i++) {
+			float ind = arr.getFloat(i);
+			float feat = (float) v.getFeature(i); 
+			//			if (ind != feat) {
+			//			Assert.equals
+			Assert.assertEquals("Features does not match (index="+i+"): "+ ind +" =/= "+feat + "\n"+arr + "\n" + v, ind, feat, 0.0001);
+			//			}
+		}
+
+	}
+	
+//	@Test
+	public void exploreNd4jAPI() {
 		INDArray mat = Nd4j.eye(3);
 		System.err.println(mat);
 		
@@ -187,14 +207,18 @@ public class ND4JTests extends UnitTestBase {
 		
 		SubSet data = getIrisClassificationData(); 
 		DataConverter conv = ND4JUtil.DataConverter.classification(data);
-		INDArray features = conv.getFeaturesMatrix();
-		INDArray target = conv.getLabelsMatrix();
-		System.err.println(features.shapeInfoToString());
-		System.err.println(target.shapeInfoToString());
 		
-		System.out.println(target.toStringFull());
-		System.out.println();
-		System.out.println(features.toStringFull());
+		// Features
+		INDArray features = conv.getFeaturesMatrix();
+		Assert.assertEquals(4, features.columns());
+		
+		// Labels as one-hot
+		INDArray target = conv.getLabelsMatrix();
+		Assert.assertEquals(3, target.columns());
+		INDArray colSums = target.sum(1);
+		Assert.assertEquals(Nd4j.ones(target.rows()), colSums);
+		
+		Assert.assertEquals(target.rows(), features.rows());
 		
 	}
 

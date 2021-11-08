@@ -27,28 +27,31 @@ public class ND4JUtil {
 	public static final DataType DEFAULT_D_TYPE = DataType.FLOAT;
 	
 	/**
-	 * Creates a 1 x <code>numFeat</code> matrix of DataType.DOUBLE 
-	 * @param v
-	 * @param numFeat
-	 * @return
+	 * Creates a 1 x <code>numFeat</code> matrix using the default DataType {@link #DEFAULT_D_TYPE}
+	 * @param v The CPSign FeatureVector instance
+	 * @param numFeat The number of features the vector should have
+	 * @return A 1x{@code numFeat} INDArray corresponding to the input FeatureVector {@code v}
 	 */
 	public static INDArray toArray(FeatureVector v, int numFeat) {
-//		INDArray arr = Nd4j.zeros(DataType.DOUBLE, 1,numFeat);
-//		fillArray(v, arr);
 		return toArray(v, numFeat, DEFAULT_D_TYPE);
 	}
 	
-	public static INDArray toArray(FeatureVector v, int numFeat,DataType dType) {
-		INDArray arr = Nd4j.zeros(dType, 1,numFeat);
+	public static INDArray toArray(FeatureVector v, int numFeat, DataType dType) {
+		INDArray arr = Nd4j.zeros(dType, 1, numFeat);
 		fillArray(v, arr);
 		return arr;
 	}
+	
+	/**
+	 * Fill values from CPSign FeatureVector into a ND4J INDArray instance 
+	 * @param v The CPSign FeatureVector instance
+	 * @param row A Nd4j 2dim array of the correct shape with only zeros (to be filled)
+	 * @return The {@code row} that was given as input
+	 */
 	public static INDArray fillArray(FeatureVector v, INDArray row) {
 		
-//		row.getColumn(arg0)
 		for (Feature sf : v) {
 			row.putScalar(sf.getIndex(), sf.getValue());
-//			row.putScalar(new int[] {sf.getIndex()}, sf.getValue());
 		}
 		return row;
 	}

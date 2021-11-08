@@ -98,6 +98,9 @@ public class TestDL4JClassifier extends UnitTestBase {
 		Assert.assertEquals(ba.getScore(), ba2.getScore(), 0.000001);
 		Assert.assertEquals(ca.getScore(), ca2.getScore(), 0.000001);
 		
+		clf.close();
+		loaded.close();
+		
 	}
 	
 	
