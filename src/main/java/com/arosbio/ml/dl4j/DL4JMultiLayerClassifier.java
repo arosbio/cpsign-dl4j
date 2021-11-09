@@ -10,10 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
-import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
-import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
@@ -32,7 +30,8 @@ import com.arosbio.modeling.data.FeatureVector;
 import com.arosbio.modeling.ml.algorithms.MultiLabelClassifier;
 import com.arosbio.modeling.ml.algorithms.ScoringClassifier;
 
-public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase implements ScoringClassifier, MultiLabelClassifier, Closeable {
+public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase 
+	implements ScoringClassifier, MultiLabelClassifier, Closeable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerClassifier.class);
 
@@ -42,19 +41,6 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase implements Scor
 	public static final LossFunction DEFAULT_LOSS_FUNC = LossFunction.MCXENT;
 
 	// Settings
-//	private long seed = CPSignSettings.getInstance().getRNGSeed();
-	/** The width of the hidden layers in the network - all will have the same width */
-//	private int networkWidth = 3;
-//	private int numHiddenLayers = 3;
-//	private int numEpoch = 10;
-//	private Integer batchSize; // = 50;
-//	private boolean saveUpdater = false;
-//	private NeuralNetConfiguration.Builder config;
-//	private LossFunctions.LossFunction loss = LossFunctions.LossFunction.MCXENT;
-	
-	// Not required to save
-//	private transient int printInterval = -1;
-//	private transient DataType dType = DataType.FLOAT;
 	private transient int inputWidth = -1;
 
 	// Only != null when model has been trained
@@ -63,12 +49,6 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase implements Scor
 	public DL4JMultiLayerClassifier() {
 		super();
 		setLossFunc(DEFAULT_LOSS_FUNC);
-
-//		config = new NeuralNetConfiguration.Builder()
-//				.activation(Activation.RELU)
-//				.weightInit(WeightInit.XAVIER)
-//				.updater(new Sgd(0.9))
-//				.l2(1e-4);
 	}
 
 	public DL4JMultiLayerClassifier(NeuralNetConfiguration.Builder config) {
@@ -76,65 +56,10 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase implements Scor
 		setLossFunc(DEFAULT_LOSS_FUNC);
 	}
 	
-//	public DL4JMultiLayerClassifier setNumEpoch(int nEpoch) {
-//		this.numEpoch = nEpoch;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setBatchSize(int batchSize) {
-//		this.batchSize = batchSize;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setNumHiddenLayers(int nLayers) {
-//		this.numHiddenLayers = nLayers;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setNetworkWidth(int width) {
-//		this.networkWidth = width;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setLossFunc(LossFunction loss) {
-//		this.loss = loss;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setLoggingInterval(int interval) {
-//		this.printInterval = interval;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setUpdater(IUpdater updater) {
-//		this.config.updater(updater);
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setActivation(IActivation activation) {
-//		this.config.activation(activation);
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setActivation(Activation activation) {
-//		this.config.activation(activation);
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setWeightInit(WeightInit init) {
-//		this.config.weightInit(init);
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerClassifier setDType(DataType type) {
-//		this.dType = type;
-//		return this;
-//	}
 	
 	@Override
 	public Map<String, Object> getProperties() {
-		// TODO Auto-generated method stub
-		return new HashMap<>();
+		return super.getProperties();
 	}
 
 	@Override
@@ -222,23 +147,21 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase implements Scor
 		int numOutputs = DataUtils.countLabels(trainingset).size();
 
 		// Create the list builder and add the input layer
-		ListBuilder listBldr = config.seed(seed).dataType(dType).list()
-				.layer(new DenseLayer.Builder().nIn(inputWidth).nOut(networkWidth).build());
+		ListBuilder listBldr = config.seed(seed).dataType(dType).list();
 
 		// Add hidden layers
-		for (int i=0; i<numHiddenLayers; i++) {
-			listBldr.layer(new DenseLayer.Builder().nIn(networkWidth).nOut(networkWidth)
-					.build());
-		}
-
+		int lastW = addHiddenLayers(listBldr,inputWidth);//, numOutputs);
+		
 		// Add output layer
 		listBldr.layer( new OutputLayer.Builder(loss) 
 				.activation(Activation.SOFTMAX)
-				.nIn(networkWidth).nOut(numOutputs).build());
+				.nIn(lastW).nOut(numOutputs)
+				.dropOut(1) // no drop out for the output layer
+				.build()
+				);
 
 		// Create the network
-		MultiLayerConfiguration netConfig = listBldr.build();
-		model = new MultiLayerNetwork(netConfig);
+		model = new MultiLayerNetwork(listBldr.build());
 		model.init();
 		if (printInterval > 0)
 			model.setListeners(new EpochScoreListener(printInterval));
@@ -254,25 +177,6 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase implements Scor
 		model.fit(iter, numEpoch);
 		model.setLabels(conveter.getOneHotMapping().getLabelsND());
 		
-//		System.err.println("nParams: " + model.numParams());
-//		org.deeplearning4j.nn.layers.feedforward.dense.DenseLayer inputLayer = (org.deeplearning4j.nn.layers.feedforward.dense.DenseLayer) model.getLayer(0);
-////		System.err.println("getNIn(): " + inputLayer.getNIn());
-//		System.err.println("inputLayer: " +inputLayer);
-////		System.err.println("inputLayer.batchSize: " +inputLayer.batchSize());
-//		System.err.println("inputLayer.numParams: " +inputLayer.numParams());
-//		System.err.println("inputLayer.getConf.variables: " +inputLayer.getConf().variables());
-//		System.err.println("inputLayer.getParam(W): " +inputLayer.getParam("W"));
-//		inputLayer.hasBias()
-//		System.err.println("inputLayer.numParams: " +inputLayer.numParams());
-//		System.err.println("inputLayer.params: " +inputLayer.params());
-		
-//		System.err.println("Layer toString: "+ model.getLayer(0).toString());
-
-//		try {
-//			generateVisuals(model, iter, (DataSetIterator) null);
-//		} catch (Exception e) {
-//			throw new IllegalArgumentException(e);
-//		}
 	}
 	
 

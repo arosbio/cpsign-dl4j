@@ -3,14 +3,12 @@ package com.arosbio.ml.dl4j;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
-import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
@@ -56,46 +54,10 @@ public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regre
 		setLossFunc(DEFAULT_LOSS_FUNC);
 	}
 	
-//	public DL4JMultiLayerRegressor setNumEpoch(int nEpoch) {
-//		this.numEpoch = nEpoch;
-//		return this;
-//	}
-//	
-//	/**
-//	 * Set a fixed batch size, default is otherwise to use 10 mini-batches for each epoch. If setting a value smaller than 
-//	 * there will be no mini batches and instead all data will be given for a single batch per epoch.
-//	 * @param batchSize
-//	 * @return
-//	 */
-//	public DL4JMultiLayerRegressor setBatchSize(int batchSize) {
-//		this.batchSize = batchSize;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerRegressor setNumHiddenLayers(int nLayers) {
-//		this.numHiddenLayers = nLayers;
-//		return this;
-//	}
-//	
-//	public DL4JMultiLayerRegressor setNetworkWidth(int width) {
-//		this.networkWidth = width;
-//		return this;
-//	}
-	
 	@Override
 	public Map<String, Object> getProperties() {
-		// TODO Auto-generated method stub
-		return new HashMap<>();
-	}
-
-	@Override
-	public void setSeed(long seed) {
-		this.seed = seed;
-	}
-
-	@Override
-	public long getSeed() {
-		return this.seed;
+		// TODO
+		return super.getProperties();
 	}
 
 	@Override
@@ -137,24 +99,16 @@ public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regre
 		inputWidth = DataUtils.getMaxFeatureIndex(trainingset)+1;
 		
 		// Create the list builder and add the input layer
-		ListBuilder listBldr = config.seed(seed).list()
-				.layer(new DenseLayer.Builder().nIn(inputWidth).nOut(networkWidth).build());
-
-		// Add hidden layers
-		for (int i=0; i<numHiddenLayers; i++) {
-			listBldr.layer(new DenseLayer.Builder().nIn(networkWidth).nOut(networkWidth)
-					.build());
-		}
+		ListBuilder listBldr = config.seed(seed).list();
+		
+		int lastW = addHiddenLayers(listBldr, inputWidth);
 
 		// Add output layer
 		listBldr.layer( new OutputLayer.Builder(loss)
 				.activation(Activation.IDENTITY) // Override the global activation
-				.nIn(networkWidth).nOut(1).build());
+				.nIn(lastW).nOut(1).build());
 		
-//		System.err.println(listBldr.toString());
-
 		// Create the network
-//		MultiLayerConfiguration netConfig = listBldr.build();
 		model = new MultiLayerNetwork(listBldr.build());
 		model.init();
 		model.setListeners(new EpochScoreListener());
