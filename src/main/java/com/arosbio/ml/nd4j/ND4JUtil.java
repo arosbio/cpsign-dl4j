@@ -89,6 +89,10 @@ public class ND4JUtil {
 				oneHotMap[i] = labelList.get(i);
 		}
 		
+		public OneHotMapping(OneHotMapping orig) {
+			this.oneHotMap = orig.getLabels();
+		}
+		
 		private void calcMappingFunction() {
 			labelToIndex = new HashMap<>();
 			for (int i=0; i<oneHotMap.length; i++)
@@ -166,12 +170,56 @@ public class ND4JUtil {
 
 			return dc; 
 		}
+		
+		public static DataConverter classification(List<DataRecord> records, int numAttributes, OneHotMapping labelMapping) {
+			return classification(records, numAttributes, labelMapping, DEFAULT_D_TYPE, DEFAULT_D_TYPE);
+		}
+		
+		public static DataConverter classification(List<DataRecord> records, 
+				int numAttributes, 
+				OneHotMapping labelMapping, 
+				DataType featuresDType, DataType labelsDType) {
+			DataConverter dc = new DataConverter();
+
+			
+			
+			// Copy of the given mapping
+			dc.oneHotMapping = new OneHotMapping(labelMapping); 
+
+			// Create the INDArrays
+			int nRows = records.size();
+			dc.features = Nd4j.zeros(featuresDType, nRows, numAttributes);
+			int nLabels = dc.oneHotMapping.getLabels().length;
+			dc.labels = Nd4j.zeros(labelsDType, nRows, nLabels);
+
+
+			// Only one pass for previously found data
+			for (int i=0; i < records.size(); i++) {
+				DataRecord r = records.get(i);
+				// Set label
+				dc.labels.putScalar(i,dc.oneHotMapping.getIndexFor(r.getLabel()), 1);
+
+				// Set feature array
+				INDArray row = dc.features.getRow(i);
+				fillArray(r.getFeatures(), row);
+			}
+
+			return dc; 
+		}
 
 		public static DataConverter regression(List<DataRecord> records) {
 			return regression(records,DEFAULT_D_TYPE, DEFAULT_D_TYPE);
 		}
 		
+		public static DataConverter regression(List<DataRecord> records, int numAttributes) {
+			return regression(records,numAttributes,DEFAULT_D_TYPE, DEFAULT_D_TYPE);
+		}
+		
 		public static DataConverter regression(List<DataRecord> records, DataType featuresDType, DataType labelsDType) {
+			return regression(records, DataUtils.getMaxFeatureIndex(records)+1, featuresDType, labelsDType);
+		}
+		
+		public static DataConverter regression(List<DataRecord> records, int numAttributes, DataType featuresDType, DataType labelsDType) {
 			DataConverter dc = new DataConverter();
 
 			// Create the INDArrays
@@ -179,7 +227,7 @@ public class ND4JUtil {
 			dc.features = Nd4j.zeros(
 					featuresDType,
 					nRows, 
-					DataUtils.getMaxFeatureIndex(records)+1
+					numAttributes
 					);
 			dc.labels = Nd4j.zeros(labelsDType, nRows, 1);
 
@@ -207,6 +255,10 @@ public class ND4JUtil {
 		
 		public OneHotMapping getOneHotMapping() {
 			return oneHotMapping;
+		}
+		
+		public int getNumAttributes() {
+			return features.columns();
 		}
 		
 		/**

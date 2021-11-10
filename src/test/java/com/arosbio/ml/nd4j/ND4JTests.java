@@ -89,6 +89,14 @@ public class ND4JTests extends UnitTestBase {
 			Assert.assertEquals(1d, labelRow.getDouble(ls.indexOf(lCpsign)), 0.0001);
 		}
 		
+		// Re-do the same thing but with pre-set one-hot-mapping
+		List<DataRecord> dataNew = getBinaryClassificationData().subList(0, 10);
+		DataConverter secondConv = ND4JUtil.DataConverter.classification(dataNew, converter.getNumAttributes(), converter.getOneHotMapping());
+		
+		// The converted data should be identical to the old one!
+		Assert.assertEquals(converter.getLabelsMatrix(), secondConv.getLabelsMatrix());
+		Assert.assertEquals(converter.getFeaturesMatrix(), secondConv.getFeaturesMatrix());
+		
 	}
 	
 	
@@ -99,8 +107,6 @@ public class ND4JTests extends UnitTestBase {
 
 		List<DataRecord> recs = data.subList(0, 20);
 		DataConverter converter = DataConverter.regression(recs);
-//		System.err.println(converter.getFeaturesMatrix());
-//		System.err.println(converter.getLabelsMatrix());
 		
 		// CHECK FEATURES
 		// Loop records
@@ -125,6 +131,10 @@ public class ND4JTests extends UnitTestBase {
 			Assert.assertEquals(lCpsign, lNd4j, 0.0001);
 		}
 		
+		DataConverter secondConv = DataConverter.regression(recs, converter.getNumAttributes());
+		// The converted data should be identical to the old one!
+		Assert.assertEquals(converter.getLabelsMatrix(), secondConv.getLabelsMatrix());
+		Assert.assertEquals(converter.getFeaturesMatrix(), secondConv.getFeaturesMatrix());
 	}
 	
 	@Test
@@ -196,7 +206,7 @@ public class ND4JTests extends UnitTestBase {
 		INDArray zeros = Nd4j.zeros(10);
 		System.err.println(zeros.shapeInfoToString());
 		System.err.println(zeros);
-		zeros.putScalar(1, 4); //(NDArrayIndex.indexesFor(1,5,7,9),Nd4j.create(new double[] {4,5,6,7}));
+		zeros.putScalar(1, 4);
 		System.err.println(zeros);
 		zeros = zeros.reshape(zeros.length(),1);
 		System.err.println(zeros);
@@ -221,5 +231,5 @@ public class ND4JTests extends UnitTestBase {
 		Assert.assertEquals(target.rows(), features.rows());
 		
 	}
-
+	
 }
