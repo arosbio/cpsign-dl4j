@@ -12,6 +12,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.nd4j.linalg.learning.config.Sgd;
 
+import com.arosbio.commons.logging.LoggerUtils;
 import com.arosbio.modeling.data.DataRecord;
 import com.arosbio.modeling.data.Dataset.SubSet;
 import com.arosbio.modeling.data.transform.scale.Standardizer;
@@ -29,20 +30,20 @@ public class TestDL4JRegressor extends UnitTestBase {
 
 		DL4JMultiLayerRegressor model = new DL4JMultiLayerRegressor();
 		model
-			.setNumEpoch(30)
+			.setNumEpoch(2000)
 			.setNetworkWidth(10)
 			.setNumHiddenLayers(5)
-			.setUpdater(new Sgd(0.05));
+			.setUpdater(new Sgd(0.05))
+			.setLoggingInterval(1);
 
+		
 		Standardizer std = new Standardizer();
 		trainingData = std.fitAndTransform(trainingData);
 
-//		System.err.println(trainingData.size());
 		List<DataRecord> testRecs = new ArrayList<>(trainingData.subList(0, 100));
 		trainingData.subList(0, 100).clear();
 
-		//		System.err.println(trainingData.size());
-
+		LoggerUtils.setDebugMode(System.out);
 		model.train(trainingData);
 
 		MAE absErr = new MAE();
@@ -55,6 +56,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 			r2.addPrediction(r.getLabel(), y_hat);
 			rmse.addPrediction(r.getLabel(), y_hat);
 		}
+		
 
 		System.out.println(absErr);
 		System.out.println(r2);
@@ -95,6 +97,8 @@ public class TestDL4JRegressor extends UnitTestBase {
 		Assert.assertEquals(r2.getScore(), r2_2.getScore(), .00001);
 		Assert.assertEquals(rmse.getScore(), rmse2.getScore(), .00001);
 
+		LoggerUtils.reloadLogger();
+		
 	}
-
+	
 }

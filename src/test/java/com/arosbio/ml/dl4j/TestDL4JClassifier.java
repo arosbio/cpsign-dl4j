@@ -6,7 +6,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -26,6 +30,7 @@ import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
 import com.arosbio.commons.FuzzyServiceLoader;
+import com.arosbio.commons.logging.LoggerUtils;
 import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
 import com.arosbio.modeling.app.cli.ExplainArgument;
 import com.arosbio.modeling.data.DataRecord;
@@ -44,9 +49,9 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		DL4JMultiLayerClassifier clf = new DL4JMultiLayerClassifier();
 		clf.setNumEpoch(200) //1000
+			.setTestSplitFraction(0)
 			.setNumHiddenLayers(3)
 			.setBatchSize(-1)
-//			.setLoggingInterval(5)
 			.setUpdater(new Sgd(0.1))
 			.setActivation(Activation.TANH);
 		
@@ -114,41 +119,21 @@ public class TestDL4JClassifier extends UnitTestBase {
 				.l2(1e-4);
 		
 		DL4JMultiLayerClassifier clf = new DL4JMultiLayerClassifier(config);
-		clf.setNumEpoch(1000).setNumHiddenLayers(3).setBatchSize(-1).setLoggingInterval(10);
+		clf.setNumEpoch(100).setTestSplitFraction(0).setNumHiddenLayers(3).setBatchSize(-1).setLoggingInterval(10);
 		
 		SubSet allData = getIrisClassificationData();
-		SubSet[] dataSplits = allData.splitRandom(.7);
-		SubSet trainingData = dataSplits[0];
-		SubSet testData = dataSplits[1];
+		allData.shuffle();
 		
-		Standardizer std = new Standardizer();
-		trainingData = std.fitAndTransform(trainingData);
-		testData = std.transform(testData);
+		allData = new Standardizer().fitAndTransform(allData);
+		DataRecord testRec = allData.remove(0); // A single test-example
 		
-		clf.train(trainingData);
-		
-		int pred = clf.predictClass(testData.get(0).getFeatures());
-		return;
-		
-//		int cls = clf.predictClass(testData.get(0).getFeatures());
+		LoggerUtils.setDebugMode(System.out);
+		clf.train(allData);
 		
 		
-//		
-//		int pred = clf.predictClass(testRec.getFeatures());
-//		System.err.println("True: " + testRec.getLabel() + " pred: " + pred);
-//		List<SimpleClassifierMetric> metrics = new ArrayList<>();
-//		metrics.add(new BalancedAccuracy());
-//		metrics.add(new ClassifierAccuracy());
-//		
-//		for (DataRecord r : testData) {
-//			int pred = clf.predictClass(r.getFeatures());
-////			System.err.println("true: " + r.getLabel() + " pred: " + pred);
-//			for (SimpleClassifierMetric m : metrics) {
-//				m.addPrediction((int)r.getLabel(), pred);
-//			}
-//		}
-//		System.err.println(metrics);
-//		clf.close();
+		System.err.println("test label: "+testRec.getLabel());
+		System.err.println("Scores: "+ clf.predictScores(allData.get(0).getFeatures()));
+		clf.close();
 	}
 	
 //	@Test
@@ -189,7 +174,6 @@ public class TestDL4JClassifier extends UnitTestBase {
                 .nIn(3).nOut(outputNum).build())
             .build();
         
-//        return ;
 
         //run the model
         MultiLayerNetwork model = new MultiLayerNetwork(conf);
@@ -220,10 +204,18 @@ public class TestDL4JClassifier extends UnitTestBase {
 	public void testServiceLoader() {
 		Iterator<MLAlgorithm> iter = FuzzyServiceLoader.iterator(MLAlgorithm.class);
 		
-		while(iter.hasNext()) {
+		boolean containsClfier=false, containsRegressor=false;
+		while (iter.hasNext()) {
 			MLAlgorithm alg = iter.next();
-			System.err.println(alg.getClass().getName());
+			if (alg instanceof DL4JMultiLayerRegressor)
+				containsRegressor = true;
+			else if (alg instanceof DL4JMultiLayerClassifier){
+				containsClfier = true;
+			}
+//			System.err.println(alg.getClass().getName());
 		}
+		Assert.assertTrue(containsClfier);
+		Assert.assertTrue(containsRegressor);
 	}
 	
 	@Test
@@ -231,23 +223,45 @@ public class TestDL4JClassifier extends UnitTestBase {
 		new ExplainArgument.MLAlgInfo().call();
 	}
 	
-//	@Test
-//	public void testTrain() throws IllegalArgumentException, IOException {
-//		
-//		DL4JMultiLayerClassifier clf = new DL4JMultiLayerClassifier();
-//		
-//		SubSet trainingData = getClassificationData();
-//		System.err.println(trainingData.size());
-//		DataRecord testRec = trainingData.remove(0);
-//		
-//		clf.train(trainingData);
-//		
-//		int pred = clf.predictClass(testRec.getFeatures());
-//		System.err.println("True: " + testRec.getLabel() + " pred: " + pred);
-//		
-//		for (DataRecord r : trainingData) {
-//			pred = clf.predictClass(r.getFeatures());
-//			System.err.println("True: " + r.getLabel() + " pred: " + pred);
-//		}
-//	}
+	@Test
+	public void testConfigStuff() throws Exception {
+		
+		DL4JMultiLayerClassifier clf = new DL4JMultiLayerClassifier();
+		Map<String,Object> params = new HashMap<>();
+		clf.setConfigParameters(params);
+		
+		// As a single string
+		params.put("layers", "10,20,30");
+		clf.setConfigParameters(params);
+		List<Integer> layers = clf.getHiddenLayerWidths();
+		Assert.assertEquals(Arrays.asList(10,20,30), layers);
+		
+		// As int-array
+		params.put("layers", new int[] {30,20,10});
+		clf.setConfigParameters(params);
+		layers = clf.getHiddenLayerWidths();
+		Assert.assertEquals(Arrays.asList(30,20,10), layers);
+		
+		// As list of string
+		params.put("layers", Arrays.asList("5","10","15"));
+		clf.setConfigParameters(params);
+		layers = clf.getHiddenLayerWidths();
+		Assert.assertEquals(Arrays.asList(5,10,15), layers);
+		
+		// String array
+		params.put("layers", new String[] {"50","100","015"});
+		clf.setConfigParameters(params);
+		layers = clf.getHiddenLayerWidths();
+		Assert.assertEquals(Arrays.asList(50,100,15), layers);
+		
+		// Invalid input
+		params.put("layers", new String[] {"a","b","c"});
+		try {
+			clf.setConfigParameters(params);
+			Assert.fail();
+		} catch(IllegalArgumentException e) {}
+		
+		clf.close();
+	}
+
 }
