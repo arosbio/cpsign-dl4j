@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
-import org.deeplearning4j.datasets.iterator.impl.SingletonDataSetIterator;
 import org.deeplearning4j.earlystopping.EarlyStoppingConfiguration;
 import org.deeplearning4j.earlystopping.EarlyStoppingModelSaver;
 import org.deeplearning4j.earlystopping.EarlyStoppingResult;
@@ -38,7 +37,6 @@ import org.javatuples.Pair;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.activations.IActivation;
 import org.nd4j.linalg.api.buffer.DataType;
-import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.linalg.learning.config.Sgd;
@@ -61,6 +59,7 @@ import com.arosbio.modeling.app.cli.params.converters.IntegerListOrRangeConverte
 import com.arosbio.modeling.app.cli.utils.MultiArgumentSplitter;
 import com.arosbio.modeling.data.DataRecord;
 import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
+import com.google.common.collect.Range;
 import com.google.common.io.Files;
 
 public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
@@ -74,6 +73,7 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 	public static final int DEFAULT_NETWORK_WIDTH = 10;
 	public static final int DEFAULT_N_EPOCH = 10;
 	public static final double DEFAULT_TEST_SPLIT_FRAC = 0.1; 
+	public static final int DEFAULT_ES_N_EXTRA_EPOCH = 10;
 
 	// Settings
 	protected long seed = CPSignSettings.getInstance().getRNGSeed();
@@ -86,7 +86,8 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 	private Integer batchSize;
 	private boolean batchNorm = false;
 	private double testSplitFraction = DEFAULT_TEST_SPLIT_FRAC;
-	private int earlyStoppingTerminateAfter = 10; // How many extra epochs to run without any improvement in test score
+	/** Determines for how many extra epochs to run - without improvement in loss score */
+	private int earlyStoppingTerminateAfter = 10; 
 	protected boolean saveUpdater = false;
 	protected NeuralNetConfiguration.Builder config;
 	protected LossFunctions.LossFunction loss = LossFunctions.LossFunction.MCXENT;
@@ -216,13 +217,26 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 		this.testSplitFraction = testFrac;
 		return this;
 	}
+	
+	/**
+	 * Sets for how many epochs the network should continue training, 
+	 * after seeing no improvement in the loss score
+	 * @param nEpoch Number of extra epochs, must be &ge; 1
+	 * @return The calling instance
+	 */
+	public DL4JMultiLayerBase setEarlyStopAfter(int nEpoch) {
+		if (nEpoch < 1)
+			throw new IllegalArgumentException("Number of epochs to terminate after must be >= 1");
+		this.earlyStoppingTerminateAfter = nEpoch;
+		return this;
+	}
 
 	/**
 	 * Set the regularization, either the weightDecay (preferred) or L1/L2 weight penalty.
 	 * @param weightDecay a value equal or smaller than zero disable weightDecay regularization
 	 * @param l1 a value equal or smaller than zero disable l1 regularization
 	 * @param l2 a value equal or smaller than zero disable l2 regularization
-	 * @return
+	 * @return The calling instance
 	 */
 	public DL4JMultiLayerBase setRegularization(double weightDecay, double l1, double l2) {
 		if (l1>0)
@@ -298,9 +312,9 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 	private static List<String> N_EPOCH_CONF_NAMES = Arrays.asList("nEpoch", "numEpoch");
 	private static List<String> BATCH_SIZE_CONF_NAMES = Arrays.asList("batchSize", "miniBatch");
 	private static List<String> BATCH_NORM_CONF_NAMES = Arrays.asList("batchNorm");
-	private static List<String> TEST_SPLIT_CONF_NAMES = Arrays.asList("testSplit","internalTestSplit"); // TODO - update config below
-//	private static List<String> EARLY_STOPPING_CONF_NAMES = Arrays.asList("earlyStopping"); // TODO - update config below
-	private static List<String> EARLY_STOPPING_TERMINATE_NO_IMPROVE_CONF_NAMES = Arrays.asList("earlyStopTerminateAfter"); // TODO - update config below
+	private static List<String> TEST_SPLIT_CONF_NAMES = Arrays.asList("testSplit","internalTestSplit");
+//	
+	private static List<String> EARLY_STOP_AFTER_CONF_NAMES = Arrays.asList("earlyStopAfter"); 
 	private static List<String> WEIGHT_DECAY_CONF_NAMES = Arrays.asList("weightDecay");
 	private static List<String> L2_CONF_NAMES = Arrays.asList("l2");
 	private static List<String> L1_CONF_NAMES = Arrays.asList("l1");
@@ -321,7 +335,12 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch)."));
 		confs.add(new BooleanConfigParameter(BATCH_NORM_CONF_NAMES, false)
 				.addDescription("Add batch normalization between all the dense layers"));
-		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, DEFAULT_WEIGHT_DECAY).addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
+		confs.add(new NumericConfigParameter(TEST_SPLIT_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC, Range.closed(0., .5))
+				.addDescription("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead."));
+		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
+				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));		
+		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, DEFAULT_WEIGHT_DECAY)
+				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
 		confs.add(new NumericConfigParameter(L2_CONF_NAMES, 0).addDescription("L2 regularization term. Disabled by default."));
 		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0).addDescription("L1 regularization term. Disabled by default."));
 		confs.add(new EnumConfigParameter<>(LOSS_FUNC_CONF_NAMES, EnumSet.allOf(LossFunction.class),loss).addDescription("The loss function of the network"));
@@ -399,6 +418,10 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 					batchSize = TypeUtils.asInt(c.getValue());
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
 				batchNorm = TypeUtils.asBoolean(c.getValue());
+			} else if (CollectionUtils.containsIgnoreCase(TEST_SPLIT_CONF_NAMES, key)) {
+				setTestSplitFraction(TypeUtils.asDouble(c.getValue()));
+			} else if (CollectionUtils.containsIgnoreCase(EARLY_STOP_AFTER_CONF_NAMES, key)) {
+				setEarlyStopAfter(TypeUtils.asInt(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(WEIGHT_DECAY_CONF_NAMES, key)) {
 				double decay = TypeUtils.asDouble(c.getValue());
 				if (decay <= 0)
@@ -573,73 +596,6 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 		Double s = scores.getOrDefault(epoch, null);
 		return s != null? s.toString() : "-";
 	}
-
-//	private void trainNoEarlyStopping(MultiLayerConfiguration config, 
-//			List<DataRecord> trainingData,
-//			boolean isClassification) {
-//
-//		// Create the network
-//		model = new MultiLayerNetwork(config);
-//		model.init();
-//
-//
-//		if (testSplitFraction>0) {
-//			// Train with an internal test-set 
-//			Pair<List<DataRecord>,List<DataRecord>> trainTest = getInternalTrainTestSplits(trainingData);
-//			DataConverter trainConv = isClassification ? DataConverter.classification(trainTest.getValue0()) : DataConverter.regression(trainTest.getValue0());
-//
-//			// calculate batch size 
-//			int batch = calcBatchSize(trainTest.getValue0().size());
-//			DataSetIterator iter = new INDArrayDataSetIterator(trainConv, batch);
-//			DataSet trainDataSet = new DataSet(trainConv.getFeaturesMatrix(), trainConv.getLabelsMatrix());
-//
-//			// Generate Test set
-//			DataConverter testConv = isClassification ? DataConverter.classification(trainTest.getValue1(), trainConv.getNumAttributes(), trainConv.getOneHotMapping()) : DataConverter.regression(trainTest.getValue1(),trainConv.getNumAttributes());
-//			DataSet testDataSet = new DataSet(testConv.getFeaturesMatrix(),testConv.getLabelsMatrix());
-//
-//
-//			Map<Integer,Double> trainScores = new HashMap<>(), testScores = new HashMap<>();
-//
-//
-//			for (int e=0; e<numEpoch; e++) {
-//				model.fit(iter);
-//				trainScores.put(e, model.score(trainDataSet));
-//				testScores.put(e, model.score(testDataSet));
-//			}
-//
-//			StringBuilder sb = new StringBuilder();
-//			writeScores(trainScores, testScores, sb);
-//
-//			// In the end we print the scores
-//			LOGGER.debug("Finished training model of type {} with the following metrics;{}{}",getName(),LINE_SEP,sb.toString());
-//
-//		} else {
-//			EpochScoreCollector scoreListener = null;
-//			if (printInterval > 0) {
-//				scoreListener = new EpochScoreCollector(printInterval);
-//				model.setListeners(scoreListener);
-//			}
-//
-//			// calculate batch size 
-//			int batch = calcBatchSize(trainingData.size());
-//
-//			DataConverter conveter = isClassification ? DataConverter.classification(trainingData) : DataConverter.regression(trainingData);
-//			DataSetIterator iter = new INDArrayDataSetIterator(conveter, batch);
-//
-//			model.fit(iter, numEpoch);
-//			// Set the class labels in the network - only if classification
-//			if (isClassification)
-//				model.setLabels(conveter.getOneHotMapping().getLabelsND());
-//
-//			if (scoreListener != null) {
-//				// Log scores 
-//				StringBuilder scoreOutput = new StringBuilder();
-//				writeScores(scoreListener.getScores(), null, scoreOutput);
-//				LOGGER.debug("Scores produced during training the network:{}{}",LINE_SEP,scoreOutput.toString());
-//			}
-//
-//		}
-//	}
 
 	protected List<Integer> getHiddenLayerWidths(){
 		if (explicitLayerWidths!=null && ! explicitLayerWidths.isEmpty()) {
