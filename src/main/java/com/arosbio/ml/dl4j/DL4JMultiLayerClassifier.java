@@ -1,6 +1,5 @@
 package com.arosbio.ml.dl4j;
 
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +22,7 @@ import com.arosbio.modeling.ml.algorithms.MultiLabelClassifier;
 import com.arosbio.modeling.ml.algorithms.ScoringClassifier;
 
 public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase 
-	implements ScoringClassifier, MultiLabelClassifier, Closeable {
+	implements ScoringClassifier, MultiLabelClassifier {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerClassifier.class);
@@ -45,7 +44,6 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase
 		setLossFunc(DEFAULT_LOSS_FUNC);
 	}
 	
-	
 	@Override
 	public Map<String, Object> getProperties() {
 		return super.getProperties();
@@ -60,11 +58,6 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase
 	public long getSeed() {
 		return this.seed;
 	}
-
-//	@Override
-//	public boolean isFitted() {
-//		return model != null;
-//	}
 
 	@Override
 	public String getDescription() {
@@ -153,41 +146,11 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase
 		trainNetwork(listBldr.build(), trainingset, true);		
 	}
 	
-
-//	@Override
-//	public void saveToStream(OutputStream ostream) throws IOException, IllegalStateException {
-//		if (model==null)
-//			throw new IllegalStateException("Model not trained yet");
-//		LOGGER.debug("Saving {} model to stream",NAME);
-//		ModelSerializer.writeModel(model, ostream, saveUpdater);
-//	}
-//
-//	@Override
-//	public void loadFromStream(InputStream istream) throws IOException {
-//		LOGGER.debug("Attempting to load {} model", NAME);
-//		model = ModelSerializer.restoreMultiLayerNetwork(istream);
-//		inputWidth = model.getLayer(0).getParam("W").rows();
-//		LOGGER.debug("Finished loading DL4J model with properties: " + model.summary());
-//	}
-
-	/**
-	 * Closes the underlying network and frees all resources
-	 */
-	public void close() {
-		if (model != null)
-			model.close();
-	}
-
-
 	@Override
 	public DL4JMultiLayerClassifier clone() {
 		DL4JMultiLayerClassifier clone = new DL4JMultiLayerClassifier(null);
 		super.copyParametersToNew(clone);
 		return clone;
 	}
-
 	
-
-	
-
 }

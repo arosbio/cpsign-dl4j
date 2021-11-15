@@ -1,5 +1,6 @@
 package com.arosbio.ml.dl4j;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,7 +63,8 @@ import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
 
-public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
+public abstract class DL4JMultiLayerBase 
+	implements MLAlgorithm, Configurable, Closeable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
@@ -633,5 +635,12 @@ public abstract class DL4JMultiLayerBase implements MLAlgorithm, Configurable {
 		return previousW;
 	}
 
+	/**
+	 * Closes the underlying network and frees all resources
+	 */
+	public void close() {
+		if (model != null)
+			model.close();
+	}
 
 }

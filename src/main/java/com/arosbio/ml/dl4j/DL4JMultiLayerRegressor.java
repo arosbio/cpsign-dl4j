@@ -18,22 +18,11 @@ import com.arosbio.modeling.ml.algorithms.Regressor;
 
 public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regressor {
 
-//	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerRegressor.class);
-
 	public static final String NAME = "DL4JMultiLayerRegressor";
 	public static final String DESCRIPTION = "A Deeplearning/Artifical Neural Network (DL/ANN) for regression, implemented in Deeplearning4J";
 	public static final int ID = 4;
 	public static final LossFunction DEFAULT_LOSS_FUNC = LossFunction.MSE;
-
-	// Settings
-
-//	// Not required to save
-//	private transient int inputWidth;
-//	
-//	// Only != null when model has been trained
-//	private MultiLayerNetwork model;
 	
-
 	public DL4JMultiLayerRegressor() {
 		super();
 		setLossFunc(DEFAULT_LOSS_FUNC);
@@ -65,17 +54,6 @@ public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regre
 		return ID;
 	}
 
-//	@Override
-//	public List<ConfigParameter> getConfigParameters() {
-//		return super.getConfigParameters();
-//	}
-//
-//	@Override
-//	public void setConfigParameters(Map<String, Object> params) throws IllegalStateException, IllegalArgumentException {
-//		super.setConfigParameters(params);
-//	}
-
-
 	@Override
 	public void train(List<DataRecord> trainingset) throws IllegalArgumentException {
 		if (numHiddenLayers < 1)
@@ -94,18 +72,6 @@ public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regre
 				.nIn(lastW).nOut(1).build());
 		
 		trainNetwork(listBldr.build(), trainingset, false);
-//		// Create the network
-//		model = new MultiLayerNetwork(listBldr.build());
-//		model.init();
-//		model.setListeners(new SysOutEpochScoreListener());
-//
-//		// calculate batch size
-//		int batch = calcBatchSize(trainingset.size());
-//		
-//		DataConverter conveter = DataConverter.regression(trainingset);
-//		DataSetIterator iter = new INDArrayDataSetIterator(conveter, batch);
-//
-//		model.fit(iter, numEpoch);
 	}
 	
 	@Override
@@ -113,24 +79,6 @@ public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regre
 		INDArray pred = model.output(ND4JUtil.toArray(example, inputWidth));
 		return pred.getDouble(0,0);
 	}
-
-//	@Override
-//	public void saveToStream(OutputStream ostream) throws IOException, IllegalStateException {
-//		if (model==null)
-//			throw new IllegalStateException("Model not trained yet");
-//		LOGGER.debug("Saving {} model to stream",NAME);
-//		ModelSerializer.writeModel(model, ostream, saveUpdater);
-//	}
-//
-//	@Override
-//	public void loadFromStream(InputStream istream) throws IOException {
-//		LOGGER.debug("Attempting to load {} model", NAME);
-//		model = ModelSerializer.restoreMultiLayerNetwork(istream);
-//		inputWidth = model.getLayer(0).getParam("W").rows();
-//		LOGGER.debug("Finished loading DL4J model with properties: " + model.summary());
-//	}
-
-
 
 	@Override
 	public DL4JMultiLayerRegressor clone() {
