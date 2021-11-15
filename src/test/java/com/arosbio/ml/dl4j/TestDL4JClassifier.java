@@ -47,7 +47,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 	@Test
 	public void testTrainSaveAndLoad() throws IllegalArgumentException, IOException {
 		
-		DL4JMultiLayerClassifier clf = new DL4JMultiLayerClassifier();
+		DLClassifier clf = new DLClassifier();
 		clf.setNumEpoch(200) //1000
 			.setTestSplitFraction(0)
 			.setNumHiddenLayers(3)
@@ -86,7 +86,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		}
 		
 		// Load it from file
-		DL4JMultiLayerClassifier loaded = new DL4JMultiLayerClassifier();
+		DLClassifier loaded = new DLClassifier();
 		try (InputStream istream = new FileInputStream(modelFile);){
 			loaded.loadFromStream(istream);
 		}
@@ -118,7 +118,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 				.updater(new Sgd(0.1))
 				.l2(1e-4);
 		
-		DL4JMultiLayerClassifier clf = new DL4JMultiLayerClassifier(config);
+		DLClassifier clf = new DLClassifier(config);
 		clf.setNumEpoch(100).setTestSplitFraction(0).setNumHiddenLayers(3).setBatchSize(-1).setLoggingInterval(10);
 		
 		SubSet allData = getIrisClassificationData();
@@ -207,9 +207,9 @@ public class TestDL4JClassifier extends UnitTestBase {
 		boolean containsClfier=false, containsRegressor=false;
 		while (iter.hasNext()) {
 			MLAlgorithm alg = iter.next();
-			if (alg instanceof DL4JMultiLayerRegressor)
+			if (alg instanceof DLRegressor)
 				containsRegressor = true;
-			else if (alg instanceof DL4JMultiLayerClassifier){
+			else if (alg instanceof DLClassifier){
 				containsClfier = true;
 			}
 //			System.err.println(alg.getClass().getName());
@@ -226,7 +226,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 	@Test
 	public void testConfigStuff() throws Exception {
 		
-		DL4JMultiLayerClassifier clf = new DL4JMultiLayerClassifier();
+		DLClassifier clf = new DLClassifier();
 		Map<String,Object> params = new HashMap<>();
 		clf.setConfigParameters(params);
 		

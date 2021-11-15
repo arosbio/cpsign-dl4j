@@ -16,19 +16,19 @@ import com.arosbio.modeling.data.DataUtils;
 import com.arosbio.modeling.data.FeatureVector;
 import com.arosbio.modeling.ml.algorithms.Regressor;
 
-public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regressor {
+public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 
-	public static final String NAME = "DL4JMultiLayerRegressor";
+	public static final String NAME = "DLRegressor";
 	public static final String DESCRIPTION = "A Deeplearning/Artifical Neural Network (DL/ANN) for regression, implemented in Deeplearning4J";
 	public static final int ID = 4;
 	public static final LossFunction DEFAULT_LOSS_FUNC = LossFunction.MSE;
 	
-	public DL4JMultiLayerRegressor() {
+	public DLRegressor() {
 		super();
 		setLossFunc(DEFAULT_LOSS_FUNC);
 	}
 
-	public DL4JMultiLayerRegressor(NeuralNetConfiguration.Builder config) {
+	public DLRegressor(NeuralNetConfiguration.Builder config) {
 		super(config);
 		setLossFunc(DEFAULT_LOSS_FUNC);
 	}
@@ -81,8 +81,8 @@ public class DL4JMultiLayerRegressor extends DL4JMultiLayerBase implements Regre
 	}
 
 	@Override
-	public DL4JMultiLayerRegressor clone() {
-		DL4JMultiLayerRegressor clone = new DL4JMultiLayerRegressor(null);
+	public DLRegressor clone() {
+		DLRegressor clone = new DLRegressor(null);
 		super.copyParametersToNew(clone);
 		return clone;
 	}

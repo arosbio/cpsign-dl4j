@@ -28,7 +28,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 	public void testTrainPredict() throws Exception {
 		SubSet trainingData = getAndrogenReceptorRegressionData();
 
-		DL4JMultiLayerRegressor model = new DL4JMultiLayerRegressor();
+		DLRegressor model = new DLRegressor();
 		model
 			.setNumEpoch(2000)
 			.setNetworkWidth(10)
@@ -72,7 +72,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 		}
 
 		// Load it from file
-		DL4JMultiLayerRegressor loaded = new DL4JMultiLayerRegressor();
+		DLRegressor loaded = new DLRegressor();
 		try (InputStream istream = new FileInputStream(modelFile);){
 			loaded.loadFromStream(istream);
 		}

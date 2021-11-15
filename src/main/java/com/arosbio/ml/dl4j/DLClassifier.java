@@ -21,25 +21,25 @@ import com.arosbio.modeling.data.FeatureVector;
 import com.arosbio.modeling.ml.algorithms.MultiLabelClassifier;
 import com.arosbio.modeling.ml.algorithms.ScoringClassifier;
 
-public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase 
+public class DLClassifier extends DL4JMultiLayerBase 
 	implements ScoringClassifier, MultiLabelClassifier {
 
 	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerClassifier.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(DLClassifier.class);
 
-	public static final String NAME = "DL4JMultiLayerClassifier";
+	public static final String NAME = "DLClassifier";
 	public static final String DESCRIPTION = "A Deeplearning/Artifical Neural Network (DL/ANN) for classification, implemented in Deeplearning4J";
 	public static final int ID = 17;
 	public static final LossFunction DEFAULT_LOSS_FUNC = LossFunction.MCXENT;
 
 	private transient int[] labels;
 
-	public DL4JMultiLayerClassifier() {
+	public DLClassifier() {
 		super();
 		setLossFunc(DEFAULT_LOSS_FUNC);
 	}
 
-	public DL4JMultiLayerClassifier(NeuralNetConfiguration.Builder config) {
+	public DLClassifier(NeuralNetConfiguration.Builder config) {
 		super(config);
 		setLossFunc(DEFAULT_LOSS_FUNC);
 	}
@@ -147,8 +147,8 @@ public class DL4JMultiLayerClassifier extends DL4JMultiLayerBase
 	}
 	
 	@Override
-	public DL4JMultiLayerClassifier clone() {
-		DL4JMultiLayerClassifier clone = new DL4JMultiLayerClassifier(null);
+	public DLClassifier clone() {
+		DLClassifier clone = new DLClassifier(null);
 		super.copyParametersToNew(clone);
 		return clone;
 	}
