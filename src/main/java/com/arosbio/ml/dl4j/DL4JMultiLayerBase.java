@@ -532,7 +532,12 @@ public abstract class DL4JMultiLayerBase
 					throw new IllegalArgumentException("Invalid input for config " + HIDDEN_LAYER_WIDTH_NAMES.get(0) + ": " + c.getValue());
 				}
 			} else if (CollectionUtils.containsIgnoreCase(WEIGHT_INIT_CONF_NAMES, key)){
-				throw new RuntimeException("TODO"); // TODO
+				try {
+					weightInit(WeightInit.valueOf(c.getValue().toString()));
+				} catch (Exception e) {
+					LOGGER.debug("Tried to set weightInit using input:" +c.getValue());
+					throw new IllegalArgumentException("Invalid weightInit value: "+c.getValue());
+				}
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
 				batchNorm = TypeUtils.asBoolean(c.getValue());
 			} else if (CollectionUtils.containsIgnoreCase(LOSS_FUNC_CONF_NAMES, key)) {
