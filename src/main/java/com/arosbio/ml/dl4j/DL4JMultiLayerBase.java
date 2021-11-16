@@ -31,6 +31,7 @@ import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
 import org.deeplearning4j.nn.conf.layers.BatchNormalization;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
+import org.deeplearning4j.nn.conf.layers.DropoutLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.util.ModelSerializer;
@@ -89,13 +90,15 @@ public abstract class DL4JMultiLayerBase
 	private boolean batchNorm = false;
 	private double testSplitFraction = DEFAULT_TEST_SPLIT_FRAC;
 	/** Determines for how many extra epochs to run - without improvement in loss score */
-	private int earlyStoppingTerminateAfter = 10; 
+	private int earlyStoppingTerminateAfter = 10;
+	private double inputDropOut = 0;
+	private double hiddenLayerDropOut = 0;
 	private boolean saveUpdater = false;
 	protected NeuralNetConfiguration.Builder config;
 	protected LossFunctions.LossFunction loss;
 
 	// Not required to save
-	protected transient int printInterval = -1;
+	protected transient int evalInterval = 1;
 	protected transient DataType dType = DataType.FLOAT;
 
 
@@ -193,11 +196,13 @@ public abstract class DL4JMultiLayerBase
 
 	/**
 	 * Evaluation interval, perform evaluation of loss score every {@code epoch}
-	 * @param epoch how many epochs between evaluation should be done
+	 * @param epoch how many epochs between evaluation should be done, should be in interval [1..50]
 	 * @return The calling instance (fluent API)
 	 */
 	public DL4JMultiLayerBase evalInterval(int epoch) {
-		this.printInterval = epoch;
+		if (epoch<=0 || epoch>50)
+			throw new IllegalArgumentException("Evaluation interval must be within range [1..50]");
+		this.evalInterval = epoch;
 		return this;
 	}
 
@@ -247,6 +252,11 @@ public abstract class DL4JMultiLayerBase
 		this.earlyStoppingTerminateAfter = nEpoch;
 		return this;
 	}
+	
+	public DL4JMultiLayerBase weightDecay(double decay) {
+		config.weightDecay(decay);
+		return this;
+	}
 
 	/**
 	 * Set the regularization, either the weightDecay (preferred) or L1/L2 weight penalty.
@@ -262,6 +272,30 @@ public abstract class DL4JMultiLayerBase
 			config.l2(l2);
 		// Disable (set to 0) if negative weight-decay is given
 		config.weightDecay(Math.max(0,weightDecay));
+		return this;
+	}
+	
+	/**
+	 * Drop out for the hidden layer
+	 * @param prob Probprobability of drop-out to occur
+	 * @return The calling instance (fluent API)
+	 */
+	public DL4JMultiLayerBase inputDropOut(double prob) {
+		if (prob <0 || prob>=1)
+			throw new IllegalArgumentException("Probability of drop-out must be in the range [0..1)");
+		this.inputDropOut = prob;
+		return this;
+	}
+	
+	/**
+	 * Drop out for all hidden layers
+	 * @param prob probability of drop-out to occur
+	 * @return The calling instance (fluent API)
+	 */
+	public DL4JMultiLayerBase dropOut(double prob) {
+		if (prob <0 || prob>=1)
+			throw new IllegalArgumentException("Probability of drop-out must be in the range [0..1)");
+		this.hiddenLayerDropOut = prob;
 		return this;
 	}
 
@@ -344,6 +378,8 @@ public abstract class DL4JMultiLayerBase
 	private static List<String> WEIGHT_DECAY_CONF_NAMES = Arrays.asList("weightDecay");
 	private static List<String> L2_CONF_NAMES = Arrays.asList("l2");
 	private static List<String> L1_CONF_NAMES = Arrays.asList("l1");
+	private static List<String> INPUT_DROP_OUT_CONF_NAMES = Arrays.asList("inputDropOut");
+	private static List<String> HIDDEN_DROP_OUT_CONF_NAMES = Arrays.asList("dropOut");
 	private static List<String> LOSS_FUNC_CONF_NAMES = Arrays.asList("loss");
 	private static List<String> ACTIVATION_CONF_NAMES = Arrays.asList("activation");
 
@@ -369,6 +405,10 @@ public abstract class DL4JMultiLayerBase
 				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
 		confs.add(new NumericConfigParameter(L2_CONF_NAMES, 0).addDescription("L2 regularization term. Disabled by default."));
 		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0).addDescription("L1 regularization term. Disabled by default."));
+		confs.add(new NumericConfigParameter(INPUT_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.)).addDescription("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50% chance of drop-out etc."));
+		confs.add(new NumericConfigParameter(HIDDEN_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.)).addDescription("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50% chance of drop-out etc."));
+		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0).addDescription("L1 regularization term. Disabled by default."));
+		
 		confs.add(new EnumConfigParameter<>(LOSS_FUNC_CONF_NAMES, EnumSet.allOf(LossFunction.class),loss)
 				.addDescription("The loss function of the network"));
 		confs.add(new EnumConfigParameter<>(ACTIVATION_CONF_NAMES, EnumSet.allOf(Activation.class),Activation.RELU)
@@ -467,6 +507,10 @@ public abstract class DL4JMultiLayerBase
 					config.l1(0);
 				else 
 					config.l1(l1);
+			} else if (CollectionUtils.containsIgnoreCase(INPUT_DROP_OUT_CONF_NAMES, key)) { 
+				inputDropOut(TypeUtils.asDouble(c.getValue()));
+			} else if (CollectionUtils.containsIgnoreCase(HIDDEN_DROP_OUT_CONF_NAMES, key)) {
+				dropOut(TypeUtils.asDouble(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(LOSS_FUNC_CONF_NAMES, key)) {
 				try {
 					loss = LossFunction.valueOf(c.getValue().toString());
@@ -502,7 +546,7 @@ public abstract class DL4JMultiLayerBase
 		cpy.testSplitFraction = testSplitFraction;
 		cpy.saveUpdater = saveUpdater;
 		cpy.loss = loss;
-		cpy.printInterval = printInterval;
+		cpy.evalInterval = evalInterval;
 		cpy.dType = dType;
 	}
 
@@ -544,7 +588,7 @@ public abstract class DL4JMultiLayerBase
 		EarlyStoppingConfiguration<MultiLayerNetwork> esConf = new EarlyStoppingConfiguration.Builder<MultiLayerNetwork>()
 				.epochTerminationConditions(new MaxEpochsTerminationCondition(numEpoch), // Max num epochs
 						new ScoreImprovementEpochTerminationCondition(earlyStoppingTerminateAfter,1E-5)) // Check for improvement
-				.evaluateEveryNEpochs(Math.min(50, Math.max(1,printInterval))) // Evaluate every 1-50 epoch
+				.evaluateEveryNEpochs(evalInterval) // Evaluate every 1-50 epoch
 				.iterationTerminationConditions(new MaxTimeIterationTerminationCondition(20, TimeUnit.MINUTES)) // Max of 20 minutes
 				.scoreCalculator(new DataSetLossCalculator(testIter, true)) // Calculate test set score
 				.modelSaver(saver)
@@ -647,12 +691,18 @@ public abstract class DL4JMultiLayerBase
 		if (widths == null || widths.isEmpty()) {
 			throw new IllegalStateException("Need to have at least one hidden layer: please revise network parameters");
 		}
+		
+		// If input drop out should be applied
+		if (inputDropOut>0)
+			bldr.layer(new DropoutLayer(1-inputDropOut));
 
 		int previousW = numIn;
 		// Hidden layers
 		for (int l=0; l<widths.size(); l++) {
 			int currW = widths.get(l);
 			bldr.layer(new DenseLayer.Builder().nIn(previousW).nOut(currW).build());
+			if (hiddenLayerDropOut>0)
+				bldr.layer(new DropoutLayer(1-hiddenLayerDropOut));
 			if (batchNorm)
 				bldr.layer(new BatchNormalization());
 			previousW = currW;

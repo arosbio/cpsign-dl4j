@@ -3,22 +3,31 @@ package com.arosbio.ml.dl4j;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.Assert;
 import org.junit.Test;
 import org.nd4j.linalg.learning.config.Sgd;
 
 import com.arosbio.commons.logging.LoggerUtils;
 import com.arosbio.modeling.data.DataRecord;
+import com.arosbio.modeling.data.Dataset;
 import com.arosbio.modeling.data.Dataset.SubSet;
+import com.arosbio.modeling.data.transform.scale.RobustScaler;
 import com.arosbio.modeling.data.transform.scale.Standardizer;
+import com.arosbio.modeling.ml.metrics.Metric;
+import com.arosbio.modeling.ml.metrics.MetricFactory;
+import com.arosbio.modeling.ml.metrics.SingleValuedMetric;
 import com.arosbio.modeling.ml.metrics.regression.MAE;
 import com.arosbio.modeling.ml.metrics.regression.R2;
 import com.arosbio.modeling.ml.metrics.regression.RMSE;
+import com.arosbio.modeling.ml.testing.RandomSplit;
+import com.arosbio.modeling.ml.testing.TestRunner;
 
 import test_utils.UnitTestBase;
 
@@ -99,6 +108,46 @@ public class TestDL4JRegressor extends UnitTestBase {
 
 		LoggerUtils.reloadLogger();
 		
+	}
+	
+	@Test
+	public void testDropout() throws IOException {
+		DLRegressor regressor = new DLRegressor();
+		regressor.updater(new Sgd(0.05)).dropOut(.2).inputDropOut(.1).batchSize(48).nEpoch(300);
+		
+		SubSet data = getAndrogenReceptorRegressionData();
+		
+		RobustScaler std = new RobustScaler();
+		data = std.fitAndTransform(data);
+		
+		TestRunner runner = new TestRunner(new RandomSplit(.2));
+		Dataset ds = new Dataset();
+		ds.setDataset(data);
+		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());
+		runner.evaluateRegressor(ds, regressor, metrics);
+		System.err.println(metrics);
+//		[MAE : 0.6156956466600819, R^2 : 0.37198641176608016, RMSE : 0.7879424842476385]
+		regressor.close();
+	}
+	
+	@Test
+	public void testWeightDecay() throws IOException {
+		DLRegressor regressor = new DLRegressor();
+		regressor.updater(new Sgd(0.05)).weightDecay(.05).batchSize(48).nEpoch(300);
+		
+		SubSet data = getAndrogenReceptorRegressionData();
+		
+		RobustScaler std = new RobustScaler();
+		data = std.fitAndTransform(data);
+		
+		TestRunner runner = new TestRunner(new RandomSplit(.2));
+		Dataset ds = new Dataset();
+		ds.setDataset(data);
+		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());
+		runner.evaluateRegressor(ds, regressor, metrics);
+		System.err.println(metrics);
+//		[MAE : 0.5570755737478232, R^2 : 0.46266618968589535, RMSE : 0.7607753285278875]
+		regressor.close();
 	}
 	
 }

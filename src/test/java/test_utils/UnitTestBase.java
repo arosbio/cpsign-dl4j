@@ -30,7 +30,7 @@ public class UnitTestBase {
 	 * 581012 examples, 54 features, 7 classes
 	 */
 	public static final String COV_TYPE_REL_PATH = "/data/class/covtype.scale01.gz";
-	/** 100 examples, 100 examples and 57 features. Features 0-53 all fairly small, 54-56 much larger range */
+	/** 100 examples and 57 features. Features 0-53 all fairly small, 54-56 much larger range */
 	public static final String BINARY_REL_PATH = "/data/class/train.svmlight.gz";
 	
 	/** UCI data set Mandelon, 2000 examples, 500 features. 1000 of two classes */
