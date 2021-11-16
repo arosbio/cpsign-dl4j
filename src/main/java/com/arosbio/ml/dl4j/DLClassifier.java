@@ -35,13 +35,11 @@ public class DLClassifier extends DL4JMultiLayerBase
 	private transient int[] labels;
 
 	public DLClassifier() {
-		super();
-		setLossFunc(DEFAULT_LOSS_FUNC);
+		super(DEFAULT_LOSS_FUNC);
 	}
 
 	public DLClassifier(NeuralNetConfiguration.Builder config) {
-		super(config);
-		setLossFunc(DEFAULT_LOSS_FUNC);
+		super(DEFAULT_LOSS_FUNC,config);
 	}
 	
 	@Override
@@ -72,17 +70,6 @@ public class DLClassifier extends DL4JMultiLayerBase
 	@Override
 	public int getID() {
 		return ID;
-	}
-
-	@Override
-	public List<ConfigParameter> getConfigParameters() {
-		return super.getConfigParameters();
-	}
-
-	@Override
-	public void setConfigParameters(Map<String, Object> params) 
-			throws IllegalStateException, IllegalArgumentException {
-		super.setConfigParameters(params);
 	}
 
 	@Override

@@ -59,6 +59,7 @@ import com.arosbio.modeling.CPSignSettings;
 import com.arosbio.modeling.app.cli.params.converters.IntegerListOrRangeConverter;
 import com.arosbio.modeling.app.cli.utils.MultiArgumentSplitter;
 import com.arosbio.modeling.data.DataRecord;
+import com.arosbio.modeling.io.PropertyFileSettings;
 import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
@@ -69,7 +70,6 @@ public abstract class DL4JMultiLayerBase
 	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
 
-	public static final double DEFAULT_WEIGHT_DECAY = 0.05; // TODO
 	public static final double DEFAULT_LR = 0.5;
 	public static final int DEFAULT_NUM_HIDDEN_LAYERS = 5;
 	public static final int DEFAULT_NETWORK_WIDTH = 10;
@@ -80,19 +80,19 @@ public abstract class DL4JMultiLayerBase
 	// Settings
 	protected long seed = CPSignSettings.getInstance().getRNGSeed();
 	/** The width of the hidden layers in the network - all will have the same width */
-	protected int networkWidth = DEFAULT_NETWORK_WIDTH;
-	protected int numHiddenLayers = DEFAULT_NUM_HIDDEN_LAYERS;
-	protected List<Integer> explicitLayerWidths = null;
+	private int networkWidth = DEFAULT_NETWORK_WIDTH;
+	private int numHiddenLayers = DEFAULT_NUM_HIDDEN_LAYERS;
+	private List<Integer> explicitLayerWidths = null;
 
-	protected int numEpoch = DEFAULT_N_EPOCH;
+	private int numEpoch = DEFAULT_N_EPOCH;
 	private Integer batchSize;
 	private boolean batchNorm = false;
 	private double testSplitFraction = DEFAULT_TEST_SPLIT_FRAC;
 	/** Determines for how many extra epochs to run - without improvement in loss score */
 	private int earlyStoppingTerminateAfter = 10; 
-	protected boolean saveUpdater = false;
+	private boolean saveUpdater = false;
 	protected NeuralNetConfiguration.Builder config;
-	protected LossFunctions.LossFunction loss = LossFunctions.LossFunction.MCXENT;
+	protected LossFunctions.LossFunction loss;
 
 	// Not required to save
 	protected transient int printInterval = -1;
@@ -106,16 +106,16 @@ public abstract class DL4JMultiLayerBase
 	protected MultiLayerNetwork model;
 
 
-	public DL4JMultiLayerBase() {
-
+	public DL4JMultiLayerBase(LossFunction lossFunc) {
+		this.loss = lossFunc;
 		config = new NeuralNetConfiguration.Builder()
 				.activation(Activation.RELU)
 				.weightInit(WeightInit.XAVIER)
-				.updater(new Sgd(DEFAULT_LR))
-				.weightDecay(DEFAULT_WEIGHT_DECAY);
+				.updater(new Sgd(DEFAULT_LR));
 	}
 
-	public DL4JMultiLayerBase(NeuralNetConfiguration.Builder config) {
+	public DL4JMultiLayerBase(LossFunction lossFunc, NeuralNetConfiguration.Builder config) {
+		this.loss = lossFunc;
 		this.config = config;
 	}
 
@@ -261,8 +261,18 @@ public abstract class DL4JMultiLayerBase
 	}
 
 	public Map<String, Object> getProperties() {
-		// TODO Auto-generated method stub
-		return new HashMap<>();
+		Map<String,Object> p = new HashMap<>();
+		p.put(PropertyFileSettings.ML_IMPL_NAME_KEY, getName());
+		p.put(PropertyFileSettings.ML_IMPL_KEY, getID());
+		p.put("hiddenLayers", getHiddenLayerWidths());
+		p.put(PropertyFileSettings.ML_SEED_VALUE_KEY, seed);
+		p.put("nEpoch", numEpoch);
+		p.put("batchSize", batchSize);
+		p.put("usesBatchNorm", batchNorm);
+		p.put("internalTestFraction", testSplitFraction);
+		p.put("earlyStopTerminateAfter", earlyStoppingTerminateAfter);
+		p.put("lossFunc", loss.name());
+		return p;
 	}
 
 	public void setSeed(long seed) {
@@ -340,7 +350,7 @@ public abstract class DL4JMultiLayerBase
 				.addDescription("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead."));
 		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
 				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));		
-		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, DEFAULT_WEIGHT_DECAY)
+		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, 0)
 				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
 		confs.add(new NumericConfigParameter(L2_CONF_NAMES, 0).addDescription("L2 regularization term. Disabled by default."));
 		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0).addDescription("L1 regularization term. Disabled by default."));

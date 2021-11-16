@@ -24,18 +24,15 @@ public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 	public static final LossFunction DEFAULT_LOSS_FUNC = LossFunction.MSE;
 	
 	public DLRegressor() {
-		super();
-		setLossFunc(DEFAULT_LOSS_FUNC);
+		super(DEFAULT_LOSS_FUNC);
 	}
 
 	public DLRegressor(NeuralNetConfiguration.Builder config) {
-		super(config);
-		setLossFunc(DEFAULT_LOSS_FUNC);
+		super(DEFAULT_LOSS_FUNC,config);
 	}
 	
 	@Override
 	public Map<String, Object> getProperties() {
-		// TODO
 		return super.getProperties();
 	}
 
@@ -56,8 +53,6 @@ public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 
 	@Override
 	public void train(List<DataRecord> trainingset) throws IllegalArgumentException {
-		if (numHiddenLayers < 1)
-			throw new IllegalStateException("Number of network layers must be at least 1");
 
 		inputWidth = DataUtils.getMaxFeatureIndex(trainingset)+1;
 		
