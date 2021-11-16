@@ -48,16 +48,6 @@ public class DLClassifier extends DL4JMultiLayerBase
 	}
 
 	@Override
-	public void setSeed(long seed) {
-		this.seed = seed;
-	}
-
-	@Override
-	public long getSeed() {
-		return this.seed;
-	}
-
-	@Override
 	public String getDescription() {
 		return DESCRIPTION;
 	}

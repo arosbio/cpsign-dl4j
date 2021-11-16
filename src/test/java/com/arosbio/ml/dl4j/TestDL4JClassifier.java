@@ -48,12 +48,12 @@ public class TestDL4JClassifier extends UnitTestBase {
 	public void testTrainSaveAndLoad() throws IllegalArgumentException, IOException {
 		
 		DLClassifier clf = new DLClassifier();
-		clf.setNumEpoch(200) //1000
-			.setTestSplitFraction(0)
-			.setNumHiddenLayers(3)
-			.setBatchSize(-1)
-			.setUpdater(new Sgd(0.1))
-			.setActivation(Activation.TANH);
+		clf.numEpoch(200) //1000
+			.testSplitFraction(0)
+			.numHiddenLayers(3)
+			.batchSize(-1)
+			.updater(new Sgd(0.1))
+			.activation(Activation.TANH);
 		
 		SubSet allData = getIrisClassificationData();
 		SubSet[] dataSplits = allData.splitRandom(.7);
@@ -119,7 +119,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 				.l2(1e-4);
 		
 		DLClassifier clf = new DLClassifier(config);
-		clf.setNumEpoch(100).setTestSplitFraction(0).setNumHiddenLayers(3).setBatchSize(-1).setLoggingInterval(10);
+		clf.numEpoch(100).testSplitFraction(0).numHiddenLayers(3).batchSize(-1).evalInterval(10);
 		
 		SubSet allData = getIrisClassificationData();
 		allData.shuffle();

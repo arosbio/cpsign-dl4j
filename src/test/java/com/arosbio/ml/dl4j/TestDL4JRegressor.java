@@ -30,11 +30,11 @@ public class TestDL4JRegressor extends UnitTestBase {
 
 		DLRegressor model = new DLRegressor();
 		model
-			.setNumEpoch(2000)
-			.setNetworkWidth(10)
-			.setNumHiddenLayers(5)
-			.setUpdater(new Sgd(0.05))
-			.setLoggingInterval(1);
+			.numEpoch(2000)
+			.networkWidth(10)
+			.numHiddenLayers(5)
+			.updater(new Sgd(0.05))
+			.evalInterval(1);
 
 		
 		Standardizer std = new Standardizer();

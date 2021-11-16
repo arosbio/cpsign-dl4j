@@ -119,7 +119,12 @@ public abstract class DL4JMultiLayerBase
 		this.config = config;
 	}
 
-	public DL4JMultiLayerBase setNumEpoch(int nEpoch) {
+	public DL4JMultiLayerBase numEpoch(int nEpoch) {
+		this.numEpoch = nEpoch;
+		return this;
+	}
+	
+	public DL4JMultiLayerBase nEpoch(int nEpoch) {
 		this.numEpoch = nEpoch;
 		return this;
 	}
@@ -130,17 +135,17 @@ public abstract class DL4JMultiLayerBase
 	 * @param batchSize
 	 * @return The instance
 	 */
-	public DL4JMultiLayerBase setBatchSize(int batchSize) {
+	public DL4JMultiLayerBase batchSize(int batchSize) {
 		this.batchSize = batchSize;
 		return this;
 	}
 
-	public DL4JMultiLayerBase setNumHiddenLayers(int nLayers) {
+	public DL4JMultiLayerBase numHiddenLayers(int nLayers) {
 		this.numHiddenLayers = nLayers;
 		return this;
 	}
 
-	public DL4JMultiLayerBase setNetworkWidth(int width) {
+	public DL4JMultiLayerBase networkWidth(int width) {
 		this.networkWidth = width;
 		return this;
 	}
@@ -148,11 +153,11 @@ public abstract class DL4JMultiLayerBase
 	/**
 	 * Set explicit widths for each hidden layer (i.e. allows different widths for each layer). 
 	 * The first index of the array is for the first layer and so on.. If <code>null</code> is sent, the
-	 * {@link #setNetworkWidth(int)} and {@link #setNumHiddenLayers(int)} parameters will be used instead.
+	 * {@link #networkWidth(int)} and {@link #numHiddenLayers(int)} parameters will be used instead.
 	 * @param widths An array of hidden layer widths
 	 * @return The calling instance (fluent API)
 	 */
-	public DL4JMultiLayerBase setHiddenLayers(int... widths) {
+	public DL4JMultiLayerBase hiddenLayers(int... widths) {
 		if (widths == null || widths.length == 0) {
 			explicitLayerWidths = null;
 		} else {
@@ -167,11 +172,11 @@ public abstract class DL4JMultiLayerBase
 	/**
 	 * Set explicit widths for each hidden layer (i.e. allows different widths for each layer). 
 	 * The first index of the list is for the first layer and so on.. If <code>null</code> is sent, the
-	 * {@link #setNetworkWidth(int)} and {@link #setNumHiddenLayers(int)} parameters will be used instead.
+	 * {@link #networkWidth(int)} and {@link #numHiddenLayers(int)} parameters will be used instead.
 	 * @param widths A list of hidden layer widths, or <code>null</code> 
 	 * @return The calling instance (fluent API)
 	 */
-	public DL4JMultiLayerBase setHiddenLayers(List<Integer> widths) {
+	public DL4JMultiLayerBase hiddenLayers(List<Integer> widths) {
 		if (widths == null || widths.isEmpty()) {
 			explicitLayerWidths = null;
 			return this;
@@ -181,37 +186,47 @@ public abstract class DL4JMultiLayerBase
 		return this;
 	}
 
-	public DL4JMultiLayerBase setLossFunc(LossFunction loss) {
+	public DL4JMultiLayerBase lossFunc(LossFunction loss) {
 		this.loss = loss;
 		return this;
 	}
 
-	public DL4JMultiLayerBase setLoggingInterval(int epochInterval) {
-		this.printInterval = epochInterval;
+	/**
+	 * Evaluation interval, perform evaluation of loss score every {@code epoch}
+	 * @param epoch how many epochs between evaluation should be done
+	 * @return The calling instance (fluent API)
+	 */
+	public DL4JMultiLayerBase evalInterval(int epoch) {
+		this.printInterval = epoch;
 		return this;
 	}
 
-	public DL4JMultiLayerBase setUpdater(IUpdater updater) {
+	/**
+	 * The updater
+	 * @param updater the updater
+	 * @return The calling instance (fluent API)
+	 */
+	public DL4JMultiLayerBase updater(IUpdater updater) {
 		this.config.updater(updater);
 		return this;
 	}
 
-	public DL4JMultiLayerBase setActivation(IActivation activation) {
+	public DL4JMultiLayerBase activation(IActivation activation) {
 		this.config.activation(activation);
 		return this;
 	}
 
-	public DL4JMultiLayerBase setActivation(Activation activation) {
+	public DL4JMultiLayerBase activation(Activation activation) {
 		this.config.activation(activation);
 		return this;
 	}
 
-	public DL4JMultiLayerBase setWeightInit(WeightInit init) {
+	public DL4JMultiLayerBase weightInit(WeightInit init) {
 		this.config.weightInit(init);
 		return this;
 	}
 
-	public DL4JMultiLayerBase setTestSplitFraction(double testFrac) {
+	public DL4JMultiLayerBase testSplitFraction(double testFrac) {
 		if (testFrac <0 || testFrac >0.5) {
 			LOGGER.debug("Invalid test fraction: " + testFrac);
 			throw new IllegalArgumentException("Invalid test split fraction: " + testFrac);
@@ -226,7 +241,7 @@ public abstract class DL4JMultiLayerBase
 	 * @param nEpoch Number of extra epochs, must be &ge; 1
 	 * @return The calling instance
 	 */
-	public DL4JMultiLayerBase setEarlyStopAfter(int nEpoch) {
+	public DL4JMultiLayerBase earlyStopAfter(int nEpoch) {
 		if (nEpoch < 1)
 			throw new IllegalArgumentException("Number of epochs to terminate after must be >= 1");
 		this.earlyStoppingTerminateAfter = nEpoch;
@@ -240,7 +255,7 @@ public abstract class DL4JMultiLayerBase
 	 * @param l2 a value equal or smaller than zero disable l2 regularization
 	 * @return The calling instance
 	 */
-	public DL4JMultiLayerBase setRegularization(double weightDecay, double l1, double l2) {
+	public DL4JMultiLayerBase regularization(double weightDecay, double l1, double l2) {
 		if (l1>0)
 			config.l1(l1);
 		if (l2>0)
@@ -250,12 +265,12 @@ public abstract class DL4JMultiLayerBase
 		return this;
 	}
 
-	public DL4JMultiLayerBase setBatchNorm(boolean useBatchNorm) {
+	public DL4JMultiLayerBase batchNorm(boolean useBatchNorm) {
 		this.batchNorm = useBatchNorm;
 		return this;
 	}
 
-	public DL4JMultiLayerBase setDType(DataType type) {
+	public DL4JMultiLayerBase dType(DataType type) {
 		this.dType = type;
 		return this;
 	}
@@ -431,9 +446,9 @@ public abstract class DL4JMultiLayerBase
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
 				batchNorm = TypeUtils.asBoolean(c.getValue());
 			} else if (CollectionUtils.containsIgnoreCase(TEST_FRAC_CONF_NAMES, key)) {
-				setTestSplitFraction(TypeUtils.asDouble(c.getValue()));
+				testSplitFraction(TypeUtils.asDouble(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(EARLY_STOP_AFTER_CONF_NAMES, key)) {
-				setEarlyStopAfter(TypeUtils.asInt(c.getValue()));
+				earlyStopAfter(TypeUtils.asInt(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(WEIGHT_DECAY_CONF_NAMES, key)) {
 				double decay = TypeUtils.asDouble(c.getValue());
 				if (decay <= 0)
@@ -461,7 +476,7 @@ public abstract class DL4JMultiLayerBase
 				}
 			} else if (CollectionUtils.containsIgnoreCase(ACTIVATION_CONF_NAMES, key)) {
 				try {
-					setActivation(Activation.valueOf(c.getValue().toString()));
+					activation(Activation.valueOf(c.getValue().toString()));
 				} catch (Exception e) {
 					LOGGER.debug("Tried to set activation-function using input:" +c.getValue());
 					throw new IllegalArgumentException("Invalid Activation-function: "+c.getValue());
@@ -546,9 +561,9 @@ public abstract class DL4JMultiLayerBase
 		// Log scores 
 		StringBuilder scoreOutput = new StringBuilder();
 		if (testSplitFraction>0)
-			writeScores(null, result.getScoreVsEpoch(), scoreOutput);
+			writeLossScores(null, result.getScoreVsEpoch(), scoreOutput);
 		else
-			writeScores(result.getScoreVsEpoch(), null, scoreOutput);
+			writeLossScores(result.getScoreVsEpoch(), null, scoreOutput);
 		LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
 		
 		if (Double.isNaN(result.getBestModelScore())) {
@@ -569,7 +584,7 @@ public abstract class DL4JMultiLayerBase
 	 * @param a Appendable to write to
 	 * @return {@code true} if anything was written, {@code false} otherwise
 	 */
-	public static boolean writeScores(Map<Integer,Double> trainScores, Map<Integer,Double> testScores, Appendable a){
+	public static boolean writeLossScores(Map<Integer,Double> trainScores, Map<Integer,Double> testScores, Appendable a){
 		boolean hasTrainS = trainScores != null && !trainScores.isEmpty();
 		boolean hasTestS = testScores != null && !testScores.isEmpty();
 		if (!hasTestS && !hasTrainS) {
