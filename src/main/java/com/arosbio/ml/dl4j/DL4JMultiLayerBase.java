@@ -71,6 +71,7 @@ public abstract class DL4JMultiLayerBase
 	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
 
+	// Defaults
 	public static final double DEFAULT_LR = 0.5;
 	public static final int DEFAULT_NUM_HIDDEN_LAYERS = 5;
 	public static final int DEFAULT_NETWORK_WIDTH = 10;
@@ -78,35 +79,42 @@ public abstract class DL4JMultiLayerBase
 	public static final double DEFAULT_TEST_SPLIT_FRAC = 0.1; 
 	public static final int DEFAULT_ES_N_EXTRA_EPOCH = 10;
 
-	// Settings
-	protected long seed = CPSignSettings.getInstance().getRNGSeed();
+	//--- Settings - general
+	private long seed = CPSignSettings.getInstance().getRNGSeed();
+	
+	//--- Settings - network structure
 	/** The width of the hidden layers in the network - all will have the same width */
 	private int networkWidth = DEFAULT_NETWORK_WIDTH;
 	private int numHiddenLayers = DEFAULT_NUM_HIDDEN_LAYERS;
 	private List<Integer> explicitLayerWidths = null;
+	private boolean batchNorm = false;
 
+	//--- Settings - run configs
 	private int numEpoch = DEFAULT_N_EPOCH;
 	private Integer batchSize;
-	private boolean batchNorm = false;
 	private double testSplitFraction = DEFAULT_TEST_SPLIT_FRAC;
 	/** Determines for how many extra epochs to run - without improvement in loss score */
 	private int earlyStoppingTerminateAfter = 10;
+	
+	//--- Settings - regularization
 	private double inputDropOut = 0;
 	private double hiddenLayerDropOut = 0;
-	private boolean saveUpdater = false;
+	
+	
+	//--- Settings - only from when instantiated until trained, not loaded again
 	protected NeuralNetConfiguration.Builder config;
 	protected LossFunctions.LossFunction loss;
 
-	// Not required to save
-	protected transient int evalInterval = 1;
+	//--- Settings - not required to save
+	private transient int evalInterval = 1;
 	protected transient DataType dType = DataType.FLOAT;
+	private boolean saveUpdater = false;
 
-
-	// Settings only when trained
+	//--- Settings only when trained
 	/** The input width for the network - should be re-set when model is loaded */
 	protected transient int inputWidth = -1;
 	/** Only != null when model has been trained */
-	protected MultiLayerNetwork model;
+	protected transient MultiLayerNetwork model;
 
 
 	public DL4JMultiLayerBase(LossFunction lossFunc) {
@@ -121,38 +129,24 @@ public abstract class DL4JMultiLayerBase
 		this.loss = lossFunc;
 		this.config = config;
 	}
-
-	public DL4JMultiLayerBase numEpoch(int nEpoch) {
-		this.numEpoch = nEpoch;
-		return this;
-	}
 	
-	public DL4JMultiLayerBase nEpoch(int nEpoch) {
-		this.numEpoch = nEpoch;
-		return this;
-	}
-
-	/**
-	 * Set a fixed mini-batch size, default is to use 10 mini-batches for each epoch. If setting a negative value 
-	 * there will be no mini batches and instead all data will be given for a single batch per epoch.
-	 * @param batchSize
-	 * @return The instance
+	/*
+	 * ****************************************************************************
+	 * NETWORK STRUCTURE SETTERS
+	 * 
+	 * ****************************************************************************
 	 */
-	public DL4JMultiLayerBase batchSize(int batchSize) {
-		this.batchSize = batchSize;
-		return this;
-	}
-
-	public DL4JMultiLayerBase numHiddenLayers(int nLayers) {
-		this.numHiddenLayers = nLayers;
-		return this;
-	}
-
+	
 	public DL4JMultiLayerBase networkWidth(int width) {
 		this.networkWidth = width;
 		return this;
 	}
-
+	
+	public DL4JMultiLayerBase numHiddenLayers(int nLayers) {
+		this.numHiddenLayers = nLayers;
+		return this;
+	}
+	
 	/**
 	 * Set explicit widths for each hidden layer (i.e. allows different widths for each layer). 
 	 * The first index of the array is for the first layer and so on.. If <code>null</code> is sent, the
@@ -189,30 +183,18 @@ public abstract class DL4JMultiLayerBase
 		return this;
 	}
 
+	public DL4JMultiLayerBase weightInit(WeightInit init) {
+		this.config.weightInit(init);
+		return this;
+	}
+	
+	public DL4JMultiLayerBase batchNorm(boolean useBatchNorm) {
+		this.batchNorm = useBatchNorm;
+		return this;
+	}
+	
 	public DL4JMultiLayerBase lossFunc(LossFunction loss) {
 		this.loss = loss;
-		return this;
-	}
-
-	/**
-	 * Evaluation interval, perform evaluation of loss score every {@code epoch}
-	 * @param epoch how many epochs between evaluation should be done, should be in interval [1..50]
-	 * @return The calling instance (fluent API)
-	 */
-	public DL4JMultiLayerBase evalInterval(int epoch) {
-		if (epoch<=0 || epoch>50)
-			throw new IllegalArgumentException("Evaluation interval must be within range [1..50]");
-		this.evalInterval = epoch;
-		return this;
-	}
-
-	/**
-	 * The updater
-	 * @param updater the updater
-	 * @return The calling instance (fluent API)
-	 */
-	public DL4JMultiLayerBase updater(IUpdater updater) {
-		this.config.updater(updater);
 		return this;
 	}
 
@@ -225,12 +207,50 @@ public abstract class DL4JMultiLayerBase
 		this.config.activation(activation);
 		return this;
 	}
-
-	public DL4JMultiLayerBase weightInit(WeightInit init) {
-		this.config.weightInit(init);
+	
+	/**
+	 * The updater
+	 * @param updater the updater
+	 * @return The calling instance (fluent API)
+	 */
+	public DL4JMultiLayerBase updater(IUpdater updater) {
+		this.config.updater(updater);
 		return this;
 	}
+	
+	public DL4JMultiLayerBase dType(DataType type) {
+		this.dType = type;
+		return this;
+	}
+	
+	/*
+	 * ****************************************************************************
+	 * RUNNING CONFIG SETTERS
+	 * 
+	 * ****************************************************************************
+	 */
 
+	public DL4JMultiLayerBase numEpoch(int nEpoch) {
+		this.numEpoch = nEpoch;
+		return this;
+	}
+	
+	public DL4JMultiLayerBase nEpoch(int nEpoch) {
+		this.numEpoch = nEpoch;
+		return this;
+	}
+	
+	/**
+	 * Set a fixed mini-batch size, default is to use 10 mini-batches for each epoch. If setting a negative value 
+	 * there will be no mini batches and instead all data will be given for a single batch per epoch.
+	 * @param batchSize
+	 * @return The instance
+	 */
+	public DL4JMultiLayerBase batchSize(int batchSize) {
+		this.batchSize = batchSize;
+		return this;
+	}
+	
 	public DL4JMultiLayerBase testSplitFraction(double testFrac) {
 		if (testFrac <0 || testFrac >0.5) {
 			LOGGER.debug("Invalid test fraction: " + testFrac);
@@ -253,11 +273,31 @@ public abstract class DL4JMultiLayerBase
 		return this;
 	}
 	
+	/**
+	 * Evaluation interval, perform evaluation of loss score every {@code epoch}
+	 * @param epoch how many epochs between evaluation should be done, should be in interval [1..50]
+	 * @return The calling instance (fluent API)
+	 */
+	public DL4JMultiLayerBase evalInterval(int epoch) {
+		if (epoch<=0 || epoch>50)
+			throw new IllegalArgumentException("Evaluation interval must be within range [1..50]");
+		this.evalInterval = epoch;
+		return this;
+	}
+	
+
+	/*
+	 * ****************************************************************************
+	 * REGULARIZATION SETTERS
+	 * 
+	 * ****************************************************************************
+	 */
+
 	public DL4JMultiLayerBase weightDecay(double decay) {
 		config.weightDecay(decay);
 		return this;
 	}
-
+	
 	/**
 	 * Set the regularization, either the weightDecay (preferred) or L1/L2 weight penalty.
 	 * @param weightDecay a value equal or smaller than zero disable weightDecay regularization
@@ -299,15 +339,12 @@ public abstract class DL4JMultiLayerBase
 		return this;
 	}
 
-	public DL4JMultiLayerBase batchNorm(boolean useBatchNorm) {
-		this.batchNorm = useBatchNorm;
-		return this;
-	}
-
-	public DL4JMultiLayerBase dType(DataType type) {
-		this.dType = type;
-		return this;
-	}
+	/*
+	 * ****************************************************************************
+	 * OTHER METHODS
+	 * 
+	 * ****************************************************************************
+	 */
 
 	public Map<String, Object> getProperties() {
 		Map<String,Object> p = new HashMap<>();
@@ -367,52 +404,69 @@ public abstract class DL4JMultiLayerBase
 		LOGGER.debug("Finished loading DL4J model with properties: " + model.summary());
 	}
 
+	// Structure of the network
 	private static List<String> NET_WIDTH_CONF_NAMES = Arrays.asList("width","networkWidth","hiddenLayerWidth");
 	private static List<String> N_HIDDEN_CONF_NAMES = Arrays.asList("depth","numHidden","numHiddenLayers");
 	private static List<String> HIDDEN_LAYER_WIDTH_NAMES = Arrays.asList("layers","layerWidths");
+	private static List<String> WEIGHT_INIT_CONF_NAMES = Arrays.asList("weightInit");
+	private static List<String> BATCH_NORM_CONF_NAMES = Arrays.asList("batchNorm");
+	private static List<String> LOSS_FUNC_CONF_NAMES = Arrays.asList("loss","lossFunc");
+	private static List<String> ACTIVATION_CONF_NAMES = Arrays.asList("activation");
+	
+	// Running configs
 	private static List<String> N_EPOCH_CONF_NAMES = Arrays.asList("nEpoch", "numEpoch");
 	private static List<String> BATCH_SIZE_CONF_NAMES = Arrays.asList("batchSize", "miniBatch");
-	private static List<String> BATCH_NORM_CONF_NAMES = Arrays.asList("batchNorm");
 	private static List<String> TEST_FRAC_CONF_NAMES = Arrays.asList("testFrac","internalTestFrac");
 	private static List<String> EARLY_STOP_AFTER_CONF_NAMES = Arrays.asList("earlyStopAfter"); 
+	
+	// Regularization
 	private static List<String> WEIGHT_DECAY_CONF_NAMES = Arrays.asList("weightDecay");
 	private static List<String> L2_CONF_NAMES = Arrays.asList("l2");
 	private static List<String> L1_CONF_NAMES = Arrays.asList("l1");
 	private static List<String> INPUT_DROP_OUT_CONF_NAMES = Arrays.asList("inputDropOut");
 	private static List<String> HIDDEN_DROP_OUT_CONF_NAMES = Arrays.asList("dropOut");
-	private static List<String> LOSS_FUNC_CONF_NAMES = Arrays.asList("loss");
-	private static List<String> ACTIVATION_CONF_NAMES = Arrays.asList("activation");
+	
 
 	@Override
 	public List<ConfigParameter> getConfigParameters() {
 		List<ConfigParameter> confs = new ArrayList<>();
-		confs.add(new IntegerConfigParameter(N_HIDDEN_CONF_NAMES, DEFAULT_NUM_HIDDEN_LAYERS).addDescription("Number of hidden layers"));
-		confs.add(new IntegerConfigParameter(NET_WIDTH_CONF_NAMES, DEFAULT_NETWORK_WIDTH).addDescription("The width of each hidden layer, the input and output-layers are defined by the required input and output"));
+		// Network structure
+		confs.add(new IntegerConfigParameter(NET_WIDTH_CONF_NAMES, DEFAULT_NETWORK_WIDTH)
+				.addDescription("The width of each hidden layer, the input and output-layers are defined by the required input and output"));
+		confs.add(new IntegerConfigParameter(N_HIDDEN_CONF_NAMES, DEFAULT_NUM_HIDDEN_LAYERS)
+				.addDescription("Number of hidden layers"));
 		confs.add(new StringListConfigParameter(HIDDEN_LAYER_WIDTH_NAMES, null)
-				.addDescription(String.format("Set custom layer widths for each layer, setting this will ignore the parameters %s and %s",N_HIDDEN_CONF_NAMES.get(0),NET_WIDTH_CONF_NAMES.get(0))));
-		confs.add(new IntegerConfigParameter(N_EPOCH_CONF_NAMES, DEFAULT_N_EPOCH)
-				.addDescription("The number of epochs. If running in early-stopping mode this will be the maximum number of epochs."));
-		confs.add(new IntegerConfigParameter(BATCH_SIZE_CONF_NAMES, null)
-				.addDescription("The mini-batch size, will control how many records are passed in each iteration. The default is to use 10 mini-batches for each epoch "
-						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch)."));
+				.addDescription(String.format("Set custom layer widths for each layer, setting this will ignore the parameters %s and %s",NET_WIDTH_CONF_NAMES.get(0),N_HIDDEN_CONF_NAMES.get(0))));
+		confs.add(new EnumConfigParameter<>(WEIGHT_INIT_CONF_NAMES, EnumSet.allOf(WeightInit.class),WeightInit.XAVIER)
+				.addDescription("Weight initialization function/distribution. See Deeplearning4j guides for further details."));
 		confs.add(new BooleanConfigParameter(BATCH_NORM_CONF_NAMES, false, Arrays.asList(true,false))
 				.addDescription("Add batch normalization between all the dense layers"));
-		confs.add(new NumericConfigParameter(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC, Range.closed(0., .5))
-				.addDescription("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead."));
-		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
-				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));		
-		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, 0)
-				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
-		confs.add(new NumericConfigParameter(L2_CONF_NAMES, 0).addDescription("L2 regularization term. Disabled by default."));
-		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0).addDescription("L1 regularization term. Disabled by default."));
-		confs.add(new NumericConfigParameter(INPUT_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.)).addDescription("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50% chance of drop-out etc."));
-		confs.add(new NumericConfigParameter(HIDDEN_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.)).addDescription("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50% chance of drop-out etc."));
-		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0).addDescription("L1 regularization term. Disabled by default."));
-		
 		confs.add(new EnumConfigParameter<>(LOSS_FUNC_CONF_NAMES, EnumSet.allOf(LossFunction.class),loss)
 				.addDescription("The loss function of the network"));
 		confs.add(new EnumConfigParameter<>(ACTIVATION_CONF_NAMES, EnumSet.allOf(Activation.class),Activation.RELU)
 				.addDescription("The activation function for the hidden layers"));
+		// Running config
+		confs.add(new IntegerConfigParameter(N_EPOCH_CONF_NAMES, DEFAULT_N_EPOCH)
+				.addDescription("The (maximum) number of epochs to run. Final number could be less depending on if the loss score stops to decrese and the "+EARLY_STOP_AFTER_CONF_NAMES.get(0)+" is not set to a very large number."));
+		confs.add(new IntegerConfigParameter(BATCH_SIZE_CONF_NAMES, null)
+				.addDescription("The mini-batch size, will control how many records are passed in each iteration. The default is to use 10 mini-batches for each epoch "
+						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch)."));
+		confs.add(new NumericConfigParameter(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC, Range.closed(0., .5))
+				.addDescription("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead."));
+		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
+				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));
+		// Regularization
+		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, 0)
+				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
+		confs.add(new NumericConfigParameter(L2_CONF_NAMES, 0)
+				.addDescription("L2 regularization term. Disabled by default."));
+		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0)
+				.addDescription("L1 regularization term. Disabled by default."));
+		confs.add(new NumericConfigParameter(INPUT_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.))
+				.addDescription("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc."));
+		confs.add(new NumericConfigParameter(HIDDEN_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.))
+				.addDescription("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc."));
+		
 		return confs;
 	}
 
@@ -422,6 +476,7 @@ public abstract class DL4JMultiLayerBase
 
 		for (Map.Entry<String, Object> c : params.entrySet()) {
 			String key = c.getKey();
+			// Network structure 
 			if (CollectionUtils.containsIgnoreCase(NET_WIDTH_CONF_NAMES, key)) {
 				networkWidth = TypeUtils.asInt(c.getValue());
 			} else if (CollectionUtils.containsIgnoreCase(N_HIDDEN_CONF_NAMES, key)) {
@@ -476,16 +531,34 @@ public abstract class DL4JMultiLayerBase
 					LOGGER.debug("Invalid argument for {}: {}",HIDDEN_LAYER_WIDTH_NAMES,c.getValue());
 					throw new IllegalArgumentException("Invalid input for config " + HIDDEN_LAYER_WIDTH_NAMES.get(0) + ": " + c.getValue());
 				}
-			} else if (CollectionUtils.containsIgnoreCase(N_EPOCH_CONF_NAMES, key)) {
+			} else if (CollectionUtils.containsIgnoreCase(WEIGHT_INIT_CONF_NAMES, key)){
+				throw new RuntimeException("TODO"); // TODO
+			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
+				batchNorm = TypeUtils.asBoolean(c.getValue());
+			} else if (CollectionUtils.containsIgnoreCase(LOSS_FUNC_CONF_NAMES, key)) {
+				try {
+					loss = LossFunction.valueOf(c.getValue().toString());
+				} catch (Exception e) {
+					LOGGER.debug("Tried to set loss-function using input:" +c.getValue());
+					throw new IllegalArgumentException("Invalid LossFunction: "+c.getValue());
+				}
+			} else if (CollectionUtils.containsIgnoreCase(ACTIVATION_CONF_NAMES, key)) {
+				try {
+					activation(Activation.valueOf(c.getValue().toString()));
+				} catch (Exception e) {
+					LOGGER.debug("Tried to set activation-function using input:" +c.getValue());
+					throw new IllegalArgumentException("Invalid Activation-function: "+c.getValue());
+				}
+			}
+			// Run configs
+			else if (CollectionUtils.containsIgnoreCase(N_EPOCH_CONF_NAMES, key)) {
 				numEpoch = TypeUtils.asInt(c.getValue());
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_SIZE_CONF_NAMES, key)) {
 				if (c.getValue() == null)
 					batchSize = null;
 				else
 					batchSize = TypeUtils.asInt(c.getValue());
-			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
-				batchNorm = TypeUtils.asBoolean(c.getValue());
-			} else if (CollectionUtils.containsIgnoreCase(TEST_FRAC_CONF_NAMES, key)) {
+			}  else if (CollectionUtils.containsIgnoreCase(TEST_FRAC_CONF_NAMES, key)) {
 				testSplitFraction(TypeUtils.asDouble(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(EARLY_STOP_AFTER_CONF_NAMES, key)) {
 				earlyStopAfter(TypeUtils.asInt(c.getValue()));
@@ -511,21 +584,7 @@ public abstract class DL4JMultiLayerBase
 				inputDropOut(TypeUtils.asDouble(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(HIDDEN_DROP_OUT_CONF_NAMES, key)) {
 				dropOut(TypeUtils.asDouble(c.getValue()));
-			} else if (CollectionUtils.containsIgnoreCase(LOSS_FUNC_CONF_NAMES, key)) {
-				try {
-					loss = LossFunction.valueOf(c.getValue().toString());
-				} catch (Exception e) {
-					LOGGER.debug("Tried to set loss-function using input:" +c.getValue());
-					throw new IllegalArgumentException("Invalid LossFunction: "+c.getValue());
-				}
-			} else if (CollectionUtils.containsIgnoreCase(ACTIVATION_CONF_NAMES, key)) {
-				try {
-					activation(Activation.valueOf(c.getValue().toString()));
-				} catch (Exception e) {
-					LOGGER.debug("Tried to set activation-function using input:" +c.getValue());
-					throw new IllegalArgumentException("Invalid Activation-function: "+c.getValue());
-				}
-			} else {
+			}  else {
 				LOGGER.debug("Unused Config-argument: " + c);
 			}
 		}

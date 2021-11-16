@@ -57,7 +57,7 @@ public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 		inputWidth = DataUtils.getMaxFeatureIndex(trainingset)+1;
 		
 		// Create the list builder and add the input layer
-		ListBuilder listBldr = config.seed(seed).list();
+		ListBuilder listBldr = config.seed(getSeed()).dataType(dType).list();
 		
 		int lastW = addHiddenLayers(listBldr, inputWidth);
 

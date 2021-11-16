@@ -107,7 +107,7 @@ public class DLClassifier extends DL4JMultiLayerBase
 		int numOutputs = DataUtils.countLabels(trainingset).size();
 
 		// Create the list builder and add the input layer
-		ListBuilder listBldr = config.seed(seed).dataType(dType).list();
+		ListBuilder listBldr = config.seed(getSeed()).dataType(dType).list();
 
 		// Add hidden layers
 		int lastW = addHiddenLayers(listBldr,inputWidth);
