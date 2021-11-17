@@ -27,4 +27,4 @@ fi
 mvn clean -Dmaven.test.skip=true package
 
 # remove the .jar from the final filename
-mv target/cpsign-*.jar target/cpsign
+#mv target/cpsign-*.jar target/cpsign
