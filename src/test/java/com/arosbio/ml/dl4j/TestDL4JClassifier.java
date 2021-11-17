@@ -208,7 +208,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 	
 	/*
 	 THIS WORKS:: 
-	 java -cp /Users/staffan/eclipse-workspace/CPSign-DL4J-extension/target/cpsign-dl4j-ext.jar:target/cpsign com.arosbio.modeling.app.cli.CPSignApp explain scorer
+	 java -cp /Users/staffan/git/cpsign-dl4j/target/cpsign-dl4j.jar:target/cpsign com.arosbio.modeling.app.cli.CPSignApp explain scorer
 	 */
 	
 	@Test
@@ -286,14 +286,13 @@ public class TestDL4JClassifier extends UnitTestBase {
 		clf.close();
 	}
 	
-	
 	/**
 	 * CLI test checking that the parsing of updater works as expected
 	 * @throws Exception
 	 */
 	@Test
 	public void testCLITuneScorer() throws Exception {
-		SubSet data = getIrisClassificationData();
+		SubSet data = UnitTestBase.getIrisClassificationData();
 		RobustScaler scaler = new RobustScaler();
 		data = scaler.fitAndTransform(data);
 		ChemDataset ds = new ChemDataset(DescriptorFactory.getCDKDescriptorsNo3D().subList(0, 5));
@@ -306,7 +305,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		CPSignApp.main(new String[] {TuneScorer.CMD_NAME, 
 			"--data-set",dataFile.toString(),
 			"--scorer", "dl-classifier",
-			"--license",getFirstLicenseFile().toString(),
+			"--license",UnitTestBase.getFirstLicenseFile().toString(),
 			"--test-strategy", "TestTrainSplit",
 			"--grid", "updater=\"Sgd,0.001\",\"Sgd,0.01\",\"Sgd,0.1\"",
 			"-rf", "tsv"
