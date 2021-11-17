@@ -50,15 +50,16 @@ public class UnitTestBase {
 	 */
 	@BeforeClass
 	public static void runPrior() throws IOException, InvalidLicenseException {
-		
+		new CPSignFactory(getFirstLicenseFile().toURI());
+	}
+	
+	public static File getFirstLicenseFile() {
 		FilenameFilter filter = new FilenameFilter() {
 			@Override
 			public boolean accept(File f, String name) {
 				return name.endsWith(".license");
 			}
 		};
-		
-		
 		URL url2 = UnitTestBase.class.getResource("/licenses");
 		
 		File wd = new File(url2.getFile());
@@ -68,9 +69,7 @@ public class UnitTestBase {
 					wd + "\nAnd try again");
 			Assert.fail("No license found");
 		}
-		
-		new CPSignFactory(new File(wd,files[0]).toURI());
-		
+		return new File(wd,files[0]);
 	}
 	
 	public static Dataset.SubSet getIrisClassificationData() throws IOException {

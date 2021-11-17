@@ -193,9 +193,6 @@ public class DL4JUtils {
 		String[] splits = input.split(",");
 		if (splits.length>1) {
 			for (int i=1;i<splits.length; i++) {
-//				if (splits[i].trim().isEmpty()) {
-//					args.add(null);
-//				}
 				try {
 					args.add(TypeUtils.asDouble(splits[i]));
 				} catch (Exception e) {

@@ -34,10 +34,19 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import com.arosbio.commons.FuzzyServiceLoader;
 import com.arosbio.commons.logging.LoggerUtils;
 import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
+import com.arosbio.modeling.app.cli.CPSignApp;
 import com.arosbio.modeling.app.cli.ExplainArgument;
+import com.arosbio.modeling.app.cli.TuneScorer;
+import com.arosbio.modeling.cheminf.ChemDataset;
+import com.arosbio.modeling.cheminf.NamedLabels;
+import com.arosbio.modeling.cheminf.descriptors.DescriptorFactory;
 import com.arosbio.modeling.data.DataRecord;
 import com.arosbio.modeling.data.Dataset.SubSet;
+import com.arosbio.modeling.data.transform.scale.RobustScaler;
 import com.arosbio.modeling.data.transform.scale.Standardizer;
+import com.arosbio.modeling.io.ModelCreator;
+import com.arosbio.modeling.io.ModelInfo;
+import com.arosbio.modeling.io.PrecomputedDataClassification;
 import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
 import com.arosbio.modeling.ml.metrics.classification.BalancedAccuracy;
 import com.arosbio.modeling.ml.metrics.classification.ClassifierAccuracy;
@@ -275,6 +284,33 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		
 		clf.close();
+	}
+	
+	
+	/**
+	 * CLI test checking that the parsing of updater works as expected
+	 * @throws Exception
+	 */
+	@Test
+	public void testCLITuneScorer() throws Exception {
+		SubSet data = getIrisClassificationData();
+		RobustScaler scaler = new RobustScaler();
+		data = scaler.fitAndTransform(data);
+		ChemDataset ds = new ChemDataset(DescriptorFactory.getCDKDescriptorsNo3D().subList(0, 5));
+		ds.setDataset(data);
+		ds.initializeDescriptors();
+		ds.setTextualLabels(new NamedLabels("setosa", "versicolor", "virginica"));
+		File dataFile = File.createTempFile("data", ".zip");
+		ModelCreator.generatePrecomputedModel(new PrecomputedDataClassification(ds, new ModelInfo("iris")), dataFile, null);
+		
+		CPSignApp.main(new String[] {TuneScorer.CMD_NAME, 
+			"--data-set",dataFile.toString(),
+			"--scorer", "dl-classifier",
+			"--license",getFirstLicenseFile().toString(),
+			"--test-strategy", "TestTrainSplit",
+			"--grid", "updater=\"Sgd,0.001\",\"Sgd,0.01\",\"Sgd,0.1\"",
+			"-rf", "tsv"
+		});
 	}
 
 }
