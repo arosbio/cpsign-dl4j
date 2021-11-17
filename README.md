@@ -61,10 +61,26 @@ Including this extension in a Java project would be as simple as to include the 
 The two algorithms ([DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifier.java) and [DLRegressor](src/main/java/com/arosbio/ml/dl4j/DLRegressor.java)) have been set using the default values from the [Deeplearning4j trouble shooting guide](https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training). These implementations are fairly 'simple', and supports more configuration possibilities using the Java API (e.g. when it comes to strategies for the IUpdater where e.g. learning rate can be altered during training time). More complex networks will need to be implemented separately. At least these serves as a starting point.
 
 ## Change log 
+**0.0.1-beta1**
+- Beta version which includes most important parameters to tweak in the DL networks. Makes two MLAlgorithms available through ServiceLoader functionality, which in term allows CPSign to pick them up and use them on the CLI. The currently tweakable parameters that can be altered through CLI is:
+  - Network `width`/`depth` for all hidden layers _or_ flexibility to specify the width individually for all hidden `layers`.
+  - Weight initialization (`weightInit`)
+  - Batch normalization (`batchNorm`)
+  - Loss function to use (`lossFunc`)
+  - Activation function for hidden layers (`activation`)
+  - Number of epochs to run (`numEpoch`), which is the maximum epochs to run.
+  - Mini batch size (`batchSize`)
+  - Fraction of all training examples used as internal test-set, used for determining early stopping of the training (`testFrac`)
+  - The updater used for updating weights in the network (`updater`)
+  - The optimizer used for finding the gradient in the backprop, which is used together with the updater for updating the weights (`optimizer`)
+  - Specify the number of epochs to continue training the network after there is no more improvement in the loss score (`earlyStopAfter`). The calculation of the loss score can be done either on training examples or an internal test-set, which is controled by the `testFrac` parameter.
+  - Weight decay, used for regularization (`weightDecay`)
+  - Standard `l1` and `l2` regularization terms, to control the size of the weights
+  - Both an `inputDropOut` and `dropOut` for hidden layers, which are set separately. 
 
 ## TODOs
 
 - [x] add `.install_cpsign.sh` script for installing to user local .m2 repo
 - [x] fix DLRegressor - tests/settings or what is the issue?
 - [x] fix failing tests (classification original parameters, regression)
-- [ ] Create a first release version
+- [x] Create a first release version
