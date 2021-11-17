@@ -22,6 +22,7 @@
         <!-- Properties for the Manifest -->
         <mf.impl.vendor>Aros Bio AB</mf.impl.vendor>
         <main.class>com.arosbio.ml.dl4j.MainClass</main.class>
+        <!-- <main.class>com.arosbio.modeling.app.cli.CPSignApp</main.class>  Use this main class in case merging with main CPSign code -->
 	</properties>
 
 	<dependencies>
@@ -31,7 +32,7 @@
 			<groupId>com.arosbio</groupId>
 			<artifactId>cpsign</artifactId>
 			<version>${cpsign.version}</version>
-			<scope>provided</scope>
+			<scope>provided</scope> <!-- Remove if merging with main CPSign code -->
 		</dependency>
 		
 		<!-- deeplearning4j-core: contains main functionality and neural networks -->
@@ -134,8 +135,8 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                        	<!-- You can un-comment this to exclude CPSign, to decouple the DL4J extension code from
-                        	 the main CPSign code so that you can update them individually instead-->
+                        	<!-- If you remove the artifactSet below you will include the main CPSign code and build an Uber-jar including all required code for running 
+                        	everything from a single JAR-->
                         	<artifactSet>
                 				<excludes>com.arosbio:cpsign</excludes>
                 			</artifactSet>
