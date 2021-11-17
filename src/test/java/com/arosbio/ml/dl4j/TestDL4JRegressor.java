@@ -9,9 +9,11 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.Assert;
 import org.junit.Test;
+import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.learning.config.Sgd;
 
 import com.arosbio.commons.logging.LoggerUtils;
@@ -148,6 +150,11 @@ public class TestDL4JRegressor extends UnitTestBase {
 		System.err.println(metrics);
 //		[MAE : 0.5570755737478232, R^2 : 0.46266618968589535, RMSE : 0.7607753285278875]
 		regressor.close();
+	}
+	
+	@Test
+	public void checkDefaultOptAlg() {
+		System.err.println(new NeuralNetConfiguration.Builder().getIUpdater());
 	}
 	
 }

@@ -26,6 +26,7 @@ import org.deeplearning4j.earlystopping.termination.MaxEpochsTerminationConditio
 import org.deeplearning4j.earlystopping.termination.MaxTimeIterationTerminationCondition;
 import org.deeplearning4j.earlystopping.termination.ScoreImprovementEpochTerminationCondition;
 import org.deeplearning4j.earlystopping.trainer.EarlyStoppingTrainer;
+import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
@@ -41,7 +42,7 @@ import org.nd4j.linalg.activations.IActivation;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.config.IUpdater;
-import org.nd4j.linalg.learning.config.Sgd;
+import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.slf4j.Logger;
@@ -54,6 +55,7 @@ import com.arosbio.commons.config.Configurable;
 import com.arosbio.commons.config.EnumConfigParameter;
 import com.arosbio.commons.config.IntegerConfigParameter;
 import com.arosbio.commons.config.NumericConfigParameter;
+import com.arosbio.commons.config.StringConfigParameter;
 import com.arosbio.commons.config.StringListConfigParameter;
 import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
 import com.arosbio.modeling.CPSignSettings;
@@ -72,12 +74,12 @@ public abstract class DL4JMultiLayerBase
 	private static final String LINE_SEP = System.lineSeparator();
 
 	// Defaults
-	public static final double DEFAULT_LR = 0.5;
 	public static final int DEFAULT_NUM_HIDDEN_LAYERS = 5;
 	public static final int DEFAULT_NETWORK_WIDTH = 10;
 	public static final int DEFAULT_N_EPOCH = 10;
 	public static final double DEFAULT_TEST_SPLIT_FRAC = 0.1; 
 	public static final int DEFAULT_ES_N_EXTRA_EPOCH = 10;
+	public static final WeightInit DEFAULT_WEIGHT_INIT = WeightInit.XAVIER;
 
 	//--- Settings - general
 	private long seed = CPSignSettings.getInstance().getRNGSeed();
@@ -121,8 +123,8 @@ public abstract class DL4JMultiLayerBase
 		this.loss = lossFunc;
 		config = new NeuralNetConfiguration.Builder()
 				.activation(Activation.RELU)
-				.weightInit(WeightInit.XAVIER)
-				.updater(new Sgd(DEFAULT_LR));
+				.weightInit(DEFAULT_WEIGHT_INIT)
+				.updater(new Nesterovs());
 	}
 
 	public DL4JMultiLayerBase(LossFunction lossFunc, NeuralNetConfiguration.Builder config) {
@@ -208,16 +210,6 @@ public abstract class DL4JMultiLayerBase
 		return this;
 	}
 	
-	/**
-	 * The updater
-	 * @param updater the updater
-	 * @return The calling instance (fluent API)
-	 */
-	public DL4JMultiLayerBase updater(IUpdater updater) {
-		this.config.updater(updater);
-		return this;
-	}
-	
 	public DL4JMultiLayerBase dType(DataType type) {
 		this.dType = type;
 		return this;
@@ -257,6 +249,21 @@ public abstract class DL4JMultiLayerBase
 			throw new IllegalArgumentException("Invalid test split fraction: " + testFrac);
 		}
 		this.testSplitFraction = testFrac;
+		return this;
+	}
+	
+	/**
+	 * The updater
+	 * @param updater the updater
+	 * @return The calling instance (fluent API)
+	 */
+	public DL4JMultiLayerBase updater(IUpdater updater) {
+		this.config.updater(updater);
+		return this;
+	}
+	
+	public DL4JMultiLayerBase optimizer(OptimizationAlgorithm alg) {
+		this.config.optimizationAlgo(alg);
 		return this;
 	}
 	
@@ -417,6 +424,8 @@ public abstract class DL4JMultiLayerBase
 	private static List<String> N_EPOCH_CONF_NAMES = Arrays.asList("nEpoch", "numEpoch");
 	private static List<String> BATCH_SIZE_CONF_NAMES = Arrays.asList("batchSize", "miniBatch");
 	private static List<String> TEST_FRAC_CONF_NAMES = Arrays.asList("testFrac","internalTestFrac");
+	private static List<String> UPDATER_CONF_NAMES = Arrays.asList("updater");
+	private static List<String> OPT_CONF_NAMES = Arrays.asList("opt","optimizer");
 	private static List<String> EARLY_STOP_AFTER_CONF_NAMES = Arrays.asList("earlyStopAfter"); 
 	
 	// Regularization
@@ -437,7 +446,7 @@ public abstract class DL4JMultiLayerBase
 				.addDescription("Number of hidden layers"));
 		confs.add(new StringListConfigParameter(HIDDEN_LAYER_WIDTH_NAMES, null)
 				.addDescription(String.format("Set custom layer widths for each layer, setting this will ignore the parameters %s and %s",NET_WIDTH_CONF_NAMES.get(0),N_HIDDEN_CONF_NAMES.get(0))));
-		confs.add(new EnumConfigParameter<>(WEIGHT_INIT_CONF_NAMES, EnumSet.allOf(WeightInit.class),WeightInit.XAVIER)
+		confs.add(new EnumConfigParameter<>(WEIGHT_INIT_CONF_NAMES, EnumSet.allOf(WeightInit.class),DEFAULT_WEIGHT_INIT)
 				.addDescription("Weight initialization function/distribution. See Deeplearning4j guides for further details."));
 		confs.add(new BooleanConfigParameter(BATCH_NORM_CONF_NAMES, false, Arrays.asList(true,false))
 				.addDescription("Add batch normalization between all the dense layers"));
@@ -453,6 +462,12 @@ public abstract class DL4JMultiLayerBase
 						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch)."));
 		confs.add(new NumericConfigParameter(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC, Range.closed(0., .5))
 				.addDescription("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead."));
+		confs.add(new StringConfigParameter(UPDATER_CONF_NAMES, "Nesterovs,"+Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE+","+Nesterovs.DEFAULT_NESTEROV_MOMENTUM)
+				.addDescription("Set the updater (https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm). "
+						+ "Using the Java API this can be concrete instances of the IUpdater interface, including scheduling for e.g. learning rate. For CLI users no scheduling is possible and the "
+						+ "following syntaxes are possible to use (replace the <param> with concrete floating point values);"+LINE_SEP+DL4JUtils.supportedUpdaterInput()));
+		confs.add(new EnumConfigParameter<>(OPT_CONF_NAMES, EnumSet.allOf(OptimizationAlgorithm.class), OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+				.addDescription("The optmization algorithm, for furhter info refer to: https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm"));
 		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
 				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));
 		// Regularization
@@ -528,14 +543,14 @@ public abstract class DL4JMultiLayerBase
 					// This should probably be formatted correctly - pass it along
 					throw e;
 				} catch (Exception e) {
-					LOGGER.debug("Invalid argument for {}: {}",HIDDEN_LAYER_WIDTH_NAMES,c.getValue());
+					LOGGER.debug("Invalid argument for {}: {}",HIDDEN_LAYER_WIDTH_NAMES, c.getValue());
 					throw new IllegalArgumentException("Invalid input for config " + HIDDEN_LAYER_WIDTH_NAMES.get(0) + ": " + c.getValue());
 				}
 			} else if (CollectionUtils.containsIgnoreCase(WEIGHT_INIT_CONF_NAMES, key)){
 				try {
 					weightInit(WeightInit.valueOf(c.getValue().toString()));
 				} catch (Exception e) {
-					LOGGER.debug("Tried to set weightInit using input:" +c.getValue());
+					LOGGER.debug("Tried to set weightInit using input: {}",c.getValue());
 					throw new IllegalArgumentException("Invalid weightInit value: "+c.getValue());
 				}
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
@@ -544,14 +559,14 @@ public abstract class DL4JMultiLayerBase
 				try {
 					loss = LossFunction.valueOf(c.getValue().toString());
 				} catch (Exception e) {
-					LOGGER.debug("Tried to set loss-function using input:" +c.getValue());
+					LOGGER.debug("Tried to set loss-function using input:{}", c.getValue());
 					throw new IllegalArgumentException("Invalid LossFunction: "+c.getValue());
 				}
 			} else if (CollectionUtils.containsIgnoreCase(ACTIVATION_CONF_NAMES, key)) {
 				try {
 					activation(Activation.valueOf(c.getValue().toString()));
 				} catch (Exception e) {
-					LOGGER.debug("Tried to set activation-function using input:" +c.getValue());
+					LOGGER.debug("Tried to set activation-function using input: {}",c.getValue());
 					throw new IllegalArgumentException("Invalid Activation-function: "+c.getValue());
 				}
 			}
@@ -563,11 +578,30 @@ public abstract class DL4JMultiLayerBase
 					batchSize = null;
 				else
 					batchSize = TypeUtils.asInt(c.getValue());
-			}  else if (CollectionUtils.containsIgnoreCase(TEST_FRAC_CONF_NAMES, key)) {
+			} else if (CollectionUtils.containsIgnoreCase(TEST_FRAC_CONF_NAMES, key)) {
 				testSplitFraction(TypeUtils.asDouble(c.getValue()));
+			} else if (CollectionUtils.containsIgnoreCase(UPDATER_CONF_NAMES, key)) {
+				Object val = c.getValue();
+				if (val instanceof IUpdater) {
+					updater((IUpdater) val);
+				} else if (val instanceof String) {
+					updater(DL4JUtils.toUpdater((String)val));
+				} else {
+					LOGGER.debug("Invalid input for updater, class={}, str={}",val.getClass(),val.toString());
+					throw new IllegalArgumentException("Invalid updater: " + val.toString());
+				}
+			} else if (CollectionUtils.containsIgnoreCase(OPT_CONF_NAMES, key)) {
+				try {
+					optimizer(OptimizationAlgorithm.valueOf(c.getValue().toString()));
+				} catch (Exception e) {
+					LOGGER.debug("Tried to set optimization algorithm using input:" +c.getValue());
+					throw new IllegalArgumentException("Invalid Optimization algorithm: "+c.getValue());
+				}
 			} else if (CollectionUtils.containsIgnoreCase(EARLY_STOP_AFTER_CONF_NAMES, key)) {
 				earlyStopAfter(TypeUtils.asInt(c.getValue()));
-			} else if (CollectionUtils.containsIgnoreCase(WEIGHT_DECAY_CONF_NAMES, key)) {
+			} 
+			// Regularization
+			else if (CollectionUtils.containsIgnoreCase(WEIGHT_DECAY_CONF_NAMES, key)) {
 				double decay = TypeUtils.asDouble(c.getValue());
 				if (decay <= 0)
 					config.weightDecay(0);
@@ -594,6 +628,7 @@ public abstract class DL4JMultiLayerBase
 			}
 		}
 	}
+
 
 
 

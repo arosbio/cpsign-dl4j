@@ -26,6 +26,8 @@ import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.SplitTestAndTrain;
+import org.nd4j.linalg.learning.config.Adam;
+import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
@@ -260,6 +262,17 @@ public class TestDL4JClassifier extends UnitTestBase {
 			clf.setConfigParameters(params);
 			Assert.fail();
 		} catch(IllegalArgumentException e) {}
+		
+		
+		// Updater
+		params.put("updater", "adam,0.05");
+		params.remove("layers");
+		
+		clf.setConfigParameters(params);
+		IUpdater up = clf.config.getIUpdater();
+		Assert.assertTrue(up instanceof Adam);
+		Assert.assertEquals(.05,((Adam)up).getLearningRate(),0.0001);
+		
 		
 		clf.close();
 	}
