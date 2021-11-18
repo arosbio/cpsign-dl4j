@@ -25,6 +25,7 @@ import com.arosbio.modeling.data.FeatureVector;
 import com.arosbio.modeling.data.SparseFeature;
 import com.arosbio.modeling.data.SparseFeatureImpl;
 import com.arosbio.modeling.data.SparseVector;
+import com.arosbio.modeling.data.transform.format.MakeDenseTransformer;
 
 import test_utils.UnitTestBase;
 
@@ -97,6 +98,25 @@ public class ND4JTests extends UnitTestBase {
 		Assert.assertEquals(converter.getLabelsMatrix(), secondConv.getLabelsMatrix());
 		Assert.assertEquals(converter.getFeaturesMatrix(), secondConv.getFeaturesMatrix());
 		
+	}
+	
+	@Test
+	public void testCPSign2ND4j_denseVector_reg() throws Exception {
+		SubSet data = getAndrogenReceptorRegressionData();
+
+		List<DataRecord> recs = data.subList(0, 20);
+		MakeDenseTransformer mdf = new MakeDenseTransformer();
+		mdf.fit(recs);
+		data = mdf.transform(data);
+		
+		DataConverter converter = DataConverter.regression(data);
+		
+		for (DataRecord r : recs) {
+			// Just make sure it works
+//			INDArray arr = 
+			ND4JUtil.toArray(r.getFeatures(), converter.getNumAttributes());
+//			System.err.println(arr);
+		}
 	}
 	
 	

@@ -38,7 +38,7 @@ public class ND4JUtil {
 	
 	public static INDArray toArray(FeatureVector v, int numFeat, DataType dType) {
 		INDArray arr = Nd4j.zeros(dType, 1, numFeat);
-		fillArray(v, arr);
+		fillArray(v, arr, numFeat-1);
 		return arr;
 	}
 	
@@ -49,8 +49,13 @@ public class ND4JUtil {
 	 * @return The {@code row} that was given as input
 	 */
 	public static INDArray fillArray(FeatureVector v, INDArray row) {
-		
+		return fillArray(v, row, row.columns()-1);
+	}
+	
+	public static INDArray fillArray(FeatureVector v, INDArray row, int maxColIndex) {
 		for (Feature sf : v) {
+			if (maxColIndex < sf.getIndex())
+				break;
 			row.putScalar(sf.getIndex(), sf.getValue());
 		}
 		return row;

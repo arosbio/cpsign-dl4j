@@ -31,15 +31,18 @@ import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
+import com.arosbio.chem.io.in.SDFile;
 import com.arosbio.commons.FuzzyServiceLoader;
 import com.arosbio.commons.logging.LoggerUtils;
 import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
+import com.arosbio.modeling.CPSignSettings;
 import com.arosbio.modeling.app.cli.CPSignApp;
 import com.arosbio.modeling.app.cli.ExplainArgument;
 import com.arosbio.modeling.app.cli.TuneScorer;
 import com.arosbio.modeling.cheminf.ChemDataset;
 import com.arosbio.modeling.cheminf.NamedLabels;
 import com.arosbio.modeling.cheminf.descriptors.DescriptorFactory;
+import com.arosbio.modeling.cheminf.descriptors.fp.ECFP4;
 import com.arosbio.modeling.data.DataRecord;
 import com.arosbio.modeling.data.Dataset.SubSet;
 import com.arosbio.modeling.data.transform.scale.RobustScaler;
@@ -48,8 +51,14 @@ import com.arosbio.modeling.io.ModelCreator;
 import com.arosbio.modeling.io.ModelInfo;
 import com.arosbio.modeling.io.PrecomputedDataClassification;
 import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
+import com.arosbio.modeling.ml.cp.acp.ACPClassifier;
+import com.arosbio.modeling.ml.cp.nonconf.classification.InverseProbabilityNCM;
+import com.arosbio.modeling.ml.ds_splitting.RandomSampling;
+import com.arosbio.modeling.ml.metrics.Metric;
 import com.arosbio.modeling.ml.metrics.classification.BalancedAccuracy;
 import com.arosbio.modeling.ml.metrics.classification.ClassifierAccuracy;
+import com.arosbio.modeling.ml.testing.RandomSplit;
+import com.arosbio.modeling.ml.testing.TestRunner;
 
 import test_utils.UnitTestBase;
 
@@ -284,6 +293,32 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		
 		clf.close();
+	}
+	
+	/*
+	 * This specific split (using this rng) made train-examples with less features which set the inputWidth of the network to smaller than
+	 * some of the test-examples - which made caused it to fail with indexoutofbounds in ND4JUtils conversion of the test-examples at predict-time.
+	 */
+	@Test
+	public void bugSearching() throws Exception {
+		
+		CPSignSettings.getInstance().setRNGSeed(1637217339288l);
+		// Predictor
+		DLClassifier clf = new DLClassifier(); 
+		clf.nEpoch(1000).testSplitFraction(0d);
+		ACPClassifier acp = new ACPClassifier(new InverseProbabilityNCM(clf), new RandomSampling(1, .2));
+		
+		// Data
+		ChemDataset ds = new ChemDataset(new ECFP4());
+		ds.initializeDescriptors();
+		ds.add(new SDFile(TestDL4JClassifier.class.getResource(AmesBinaryClf.AMES_REL_PATH).toURI()).getIterator(),AmesBinaryClf.PROPERTY,AmesBinaryClf.LABELS);
+//		System.err.println("max index: " + (DataUtils.getMaxFeatureIndex(ds.getDataset())+1));
+//		System.err.println(ds);
+		
+		TestRunner tester = new TestRunner(new RandomSplit());
+		List<Metric> mets = tester.evaluate(ds, acp);
+		Assert.assertFalse(mets.isEmpty());
+//		System.err.println(mets);
 	}
 	
 	/**

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
@@ -14,6 +15,7 @@ import org.junit.BeforeClass;
 
 import com.arosbio.auth.InvalidLicenseException;
 import com.arosbio.modeling.CPSignFactory;
+import com.arosbio.modeling.cheminf.NamedLabels;
 import com.arosbio.modeling.data.DataRecord;
 import com.arosbio.modeling.data.Dataset;
 import com.arosbio.modeling.data.Dataset.SubSet;
@@ -35,6 +37,13 @@ public class UnitTestBase {
 	
 	/** UCI data set Mandelon, 2000 examples, 500 features. 1000 of two classes */
 	public static final String MADELON_REL_PATH = "/data/class/madelon.train.gz";
+	
+	/** Ames data set with chemical structures */
+	public static class AmesBinaryClf {
+		public static final String AMES_REL_PATH = "/data/class/ames_small.sdf.gz";
+		public static final String PROPERTY = "Ames test categorisation";
+		public static final NamedLabels LABELS = new NamedLabels(Arrays.asList("mutagen", "nonmutagen"));
+	}
 	
 	// Regression data
 	
