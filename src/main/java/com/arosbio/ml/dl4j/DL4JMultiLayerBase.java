@@ -114,7 +114,7 @@ public abstract class DL4JMultiLayerBase
 
 	//--- Settings only when trained
 	/** The input width for the network - should be re-set when model is loaded */
-	protected transient int inputWidth = -1;
+	private transient int inputWidth = -1;
 	/** Only != null when model has been trained */
 	protected transient MultiLayerNetwork model;
 
@@ -125,6 +125,10 @@ public abstract class DL4JMultiLayerBase
 				.activation(Activation.RELU)
 				.weightInit(DEFAULT_WEIGHT_INIT)
 				.updater(new Nesterovs());
+	}
+	
+	public int getInputWidth() {
+		return inputWidth;
 	}
 
 	public DL4JMultiLayerBase(LossFunction lossFunc, NeuralNetConfiguration.Builder config) {
@@ -790,6 +794,8 @@ public abstract class DL4JMultiLayerBase
 		if (widths == null || widths.isEmpty()) {
 			throw new IllegalStateException("Need to have at least one hidden layer: please revise network parameters");
 		}
+		
+		inputWidth = numIn;
 		
 		// If input drop out should be applied
 		if (inputDropOut>0)

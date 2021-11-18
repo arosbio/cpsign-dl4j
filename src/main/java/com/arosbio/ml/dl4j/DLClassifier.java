@@ -19,10 +19,11 @@ import com.arosbio.modeling.data.DataRecord;
 import com.arosbio.modeling.data.DataUtils;
 import com.arosbio.modeling.data.FeatureVector;
 import com.arosbio.modeling.ml.algorithms.MultiLabelClassifier;
+import com.arosbio.modeling.ml.algorithms.PseudoProbabilisticClassifier;
 import com.arosbio.modeling.ml.algorithms.ScoringClassifier;
 
 public class DLClassifier extends DL4JMultiLayerBase 
-	implements ScoringClassifier, MultiLabelClassifier {
+	implements ScoringClassifier, MultiLabelClassifier, PseudoProbabilisticClassifier {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DLClassifier.class);
@@ -75,19 +76,18 @@ public class DLClassifier extends DL4JMultiLayerBase
 	}
 
 	@Override
-	public int predictClass(FeatureVector feature) throws IllegalStateException {
+	public int predictClass(FeatureVector vector) throws IllegalStateException {
 		if (model==null)
 			throw new IllegalStateException("Model not trained yet");
-		return model.predict(ND4JUtil.toArray(feature, inputWidth))[0];
+		return model.predict(ND4JUtil.toArray(vector, getInputWidth()))[0];
 	}
 	
 	@Override
-	public Map<Integer, Double> predictScores(FeatureVector feature) 
+	public Map<Integer, Double> predictScores(FeatureVector vector) 
 			throws IllegalStateException {
 		if (model==null)
 			throw new IllegalStateException("Model not trained yet");
-
-		INDArray pred = model.output(ND4JUtil.toArray(feature, inputWidth));
+			INDArray pred = model.output(ND4JUtil.toArray(vector, getInputWidth()));
 		if (labels == null) {
 			// use an int-array instead for quick lookup and cache the labels
 			labels = model.getLabels().toIntVector();
@@ -99,18 +99,23 @@ public class DLClassifier extends DL4JMultiLayerBase
 		return predMapping;
 	}
 	
+	@Override
+	public Map<Integer, Double> predictProbabilities(FeatureVector vector) throws IllegalStateException {
+		return predictScores(vector);
+	}
+	
 
 	@Override
 	public void train(List<DataRecord> trainingset) throws IllegalArgumentException {
 		
-		inputWidth = DataUtils.getMaxFeatureIndex(trainingset)+1;
+		int nInput = DataUtils.getMaxFeatureIndex(trainingset)+1;
 		int numOutputs = DataUtils.countLabels(trainingset).size();
 
 		// Create the list builder and add the input layer
 		ListBuilder listBldr = config.seed(getSeed()).dataType(dType).list();
 
 		// Add hidden layers
-		int lastW = addHiddenLayers(listBldr,inputWidth);
+		int lastW = addHiddenLayers(listBldr, nInput);
 		
 		// Add output layer
 		listBldr.layer( new OutputLayer.Builder(loss) 
@@ -129,5 +134,7 @@ public class DLClassifier extends DL4JMultiLayerBase
 		super.copyParametersToNew(clone);
 		return clone;
 	}
+
+	
 	
 }

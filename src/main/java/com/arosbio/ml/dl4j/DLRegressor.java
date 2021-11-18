@@ -54,12 +54,12 @@ public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 	@Override
 	public void train(List<DataRecord> trainingset) throws IllegalArgumentException {
 
-		inputWidth = DataUtils.getMaxFeatureIndex(trainingset)+1;
+		int nIn = DataUtils.getMaxFeatureIndex(trainingset)+1;
 		
 		// Create the list builder and add the input layer
 		ListBuilder listBldr = config.seed(getSeed()).dataType(dType).list();
 		
-		int lastW = addHiddenLayers(listBldr, inputWidth);
+		int lastW = addHiddenLayers(listBldr, nIn);
 
 		// Add output layer
 		listBldr.layer( new OutputLayer.Builder(loss)
@@ -71,7 +71,7 @@ public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 	
 	@Override
 	public double predictValue(FeatureVector example) throws IllegalStateException {
-		INDArray pred = model.output(ND4JUtil.toArray(example, inputWidth));
+		INDArray pred = model.output(ND4JUtil.toArray(example, getInputWidth()));
 		return pred.getDouble(0,0);
 	}
 
