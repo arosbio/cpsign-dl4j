@@ -1,4 +1,4 @@
-package com.arosbio.ml.dl4j;
+package com.arosbio.ml.dl4j.eval;
 
 import org.deeplearning4j.nn.api.Model;
 import org.deeplearning4j.optimize.api.BaseTrainingListener;

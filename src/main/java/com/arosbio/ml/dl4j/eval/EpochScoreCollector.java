@@ -1,4 +1,4 @@
-package com.arosbio.ml.dl4j;
+package com.arosbio.ml.dl4j.eval;
 
 import java.util.HashMap;
 import java.util.Map;
