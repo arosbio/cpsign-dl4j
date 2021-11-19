@@ -61,6 +61,10 @@ Including this extension in a Java project would be as simple as to include the 
 The two algorithms ([DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifier.java) and [DLRegressor](src/main/java/com/arosbio/ml/dl4j/DLRegressor.java)) have been set using the default values from the [Deeplearning4j trouble shooting guide](https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training). These implementations are fairly 'simple', and supports more configuration possibilities using the Java API (e.g. when it comes to strategies for the IUpdater where e.g. learning rate can be altered during training time). More complex networks will need to be implemented separately. At least these serves as a starting point.
 
 ## Change log 
+
+**0.0.1-beta3**
+- The syntax for specifying `updater` now uses `:` instead of `,` to separate the implementation type with its sub-parameters. E.g. specifying Nesterovs using learning rate 0.05 is written like: `Nesterovs:0.05`. Solves issues when specifying several updaters to the grid of searched parameters.
+
 **0.0.1-beta2**
 - `DLClassifier` now implements `PseudoProbabilisticClassifier` interface, so that InverseProbability NCM can use these models for building CP classifier models
 - Fixed bug in converting CPSign FeatureVector into INDArray, when training examples had less features then test-examples, leading to a IndexOutOfBounds exception at predict-time of these, larger, feature vectors of test-examples.
