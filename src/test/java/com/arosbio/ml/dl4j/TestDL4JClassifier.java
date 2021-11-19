@@ -283,7 +283,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		
 		// Updater
-		params.put("updater", "adam,0.05");
+		params.put("updater", "adam:0.05");
 		params.remove("layers");
 		
 		clf.setConfigParameters(params);
@@ -339,10 +339,10 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		CPSignApp.main(new String[] {TuneScorer.CMD_NAME, 
 			"--data-set",dataFile.toString(),
-			"--scorer", "dl-classifier",
+			"--scorer", "dl-classifier:nEpoch=100", // this is not optimal, simply trying if things are picked up correctly
 			"--license",UnitTestBase.getFirstLicenseFile().toString(),
 			"--test-strategy", "TestTrainSplit",
-			"--grid", "updater=\"Sgd,0.001\",\"Sgd,0.01\",\"Sgd,0.1\"",
+			"--grid", "updater=Sgd:0.01,Sgd:0.1",
 			"-rf", "tsv"
 		});
 	}

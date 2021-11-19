@@ -22,6 +22,7 @@ import com.arosbio.commons.TypeUtils;
 public class DL4JUtils {
 
 	private static final String LINE_SEP = System.lineSeparator();
+	public static final String UPDATER_SUB_PARAM_SPLITTER = ":";
 
 	private static final String SGD_NAME ="SGD";
 	private static final String ADA_BELEIF_NAME = "AdaBelief";
@@ -49,13 +50,15 @@ public class DL4JUtils {
 	}
 	
 	public static IUpdater toUpdater(String input) {
+		if (input == null || input.trim().isEmpty())
+			throw new IllegalArgumentException("Invalid updater <null>");
 		try {
 			String lc = input.toLowerCase(Locale.ENGLISH).trim();
 			if (lc.startsWith("\"") && lc.endsWith("\"")) {
 				lc = lc.substring(1, lc.length()-1);
 			}
-			lc += ' '; // Add a space in the end, so the splitting of ',' will not remove the last index
-			String name = lc.split(",")[0];
+			lc += ' '; // Add a space in the end, so the splitting of UPDATER_SUB_PARAM_SPLITTER will not remove the last index
+			String name = lc.split(UPDATER_SUB_PARAM_SPLITTER)[0];
 			List<Double> args = getArgs(lc);
 			// Cases for each implementation
 			if (SGD_NAME.equalsIgnoreCase(name)) {
@@ -69,9 +72,7 @@ public class DL4JUtils {
 			} else if (ADA_BELEIF_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new AdaBelief();
-				else if (args.size()==1)
-					return new AdaBelief(getOrDefault(args, 0, AdaBelief.DEFAULT_LEARNING_RATE));
-				else if (args.size()==4)
+				else if (args.size()<=4)
 					return new AdaBelief(getOrDefault(args, 0, AdaBelief.DEFAULT_LEARNING_RATE), // LR
 							getOrDefault(args, 1, AdaBelief.DEFAULT_BETA1_MEAN_DECAY), // beta1
 							getOrDefault(args, 2, AdaBelief.DEFAULT_BETA2_VAR_DECAY), // beta2
@@ -82,7 +83,7 @@ public class DL4JUtils {
 			} else if (ADA_DELTA_NAME.equalsIgnoreCase(name)){
 				if (args.isEmpty())
 					return new AdaDelta();
-				else if (args.size() ==2)
+				else if (args.size() <=2)
 					return new AdaDelta(getOrDefault(args, 0, AdaDelta.DEFAULT_ADADELTA_RHO), // Rho
 							getOrDefault(args, 1, AdaDelta.DEFAULT_ADADELTA_EPSILON)); // Epsilon
 				else 
@@ -90,9 +91,7 @@ public class DL4JUtils {
 			} else if (ADA_GRAD_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new AdaGrad();
-				else if (args.size() == 1)
-					return new AdaGrad(getOrDefault(args, 0, AdaGrad.DEFAULT_ADAGRAD_LEARNING_RATE));
-				else if (args.size() == 2)
+				else if (args.size()<=2)
 					return new AdaGrad(getOrDefault(args, 0, AdaGrad.DEFAULT_ADAGRAD_LEARNING_RATE), // LR 
 							getOrDefault(args, 1, AdaGrad.DEFAULT_ADAGRAD_EPSILON)); // Epsilon
 				else
@@ -100,9 +99,7 @@ public class DL4JUtils {
 			} else if (ADAM_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new Adam();
-				else if (args.size() == 1)
-					return new Adam(getOrDefault(args, 0, Adam.DEFAULT_ADAM_LEARNING_RATE));
-				else if (args.size() == 4)
+				else if (args.size() <= 4)
 					return new Adam(getOrDefault(args, 0, Adam.DEFAULT_ADAM_LEARNING_RATE), // LR
 							getOrDefault(args, 1, Adam.DEFAULT_ADAM_BETA1_MEAN_DECAY), // Beta1
 							getOrDefault(args, 2, Adam.DEFAULT_ADAM_BETA2_VAR_DECAY), // Beta2
@@ -112,9 +109,7 @@ public class DL4JUtils {
 			} else if (ADA_MAX_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new AdaMax();
-				else if (args.size() == 1)
-					return new AdaMax(getOrDefault(args, 0, AdaMax.DEFAULT_ADAMAX_LEARNING_RATE));
-				else if (args.size() == 4)
+				else if (args.size() <= 4)
 					return new AdaMax(getOrDefault(args, 0, AdaMax.DEFAULT_ADAMAX_LEARNING_RATE), // LR
 							getOrDefault(args, 1, AdaMax.DEFAULT_ADAMAX_BETA1_MEAN_DECAY), // Beta1
 							getOrDefault(args, 2, AdaMax.DEFAULT_ADAMAX_BETA2_VAR_DECAY), // Beta2
@@ -124,9 +119,7 @@ public class DL4JUtils {
 			} else if (AMS_GRAD_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new AMSGrad();
-				else if (args.size() == 1)
-					return new AMSGrad(getOrDefault(args, 0, AMSGrad.DEFAULT_AMSGRAD_LEARNING_RATE));
-				else if (args.size() == 4)
+				else if (args.size() <= 4)
 					return new AMSGrad(getOrDefault(args, 0, AMSGrad.DEFAULT_AMSGRAD_LEARNING_RATE), // LR
 							getOrDefault(args, 1, AMSGrad.DEFAULT_AMSGRAD_BETA1_MEAN_DECAY), // Beta1
 							getOrDefault(args, 2, AMSGrad.DEFAULT_AMSGRAD_BETA2_VAR_DECAY), // Beta2
@@ -136,9 +129,7 @@ public class DL4JUtils {
 			} else if (N_ADAM_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new Nadam();
-				else if (args.size() == 1)
-					return new Nadam(getOrDefault(args, 0, Nadam.DEFAULT_NADAM_LEARNING_RATE));
-				else if (args.size() == 4)
+				else if (args.size() <= 4)
 					return new Nadam(getOrDefault(args, 0, Nadam.DEFAULT_NADAM_LEARNING_RATE), // LR
 							getOrDefault(args, 1, Nadam.DEFAULT_NADAM_BETA1_MEAN_DECAY), // Beta1
 							getOrDefault(args, 2, Nadam.DEFAULT_NADAM_BETA2_VAR_DECAY), // Beta2
@@ -148,9 +139,7 @@ public class DL4JUtils {
 			} else if (NESTEROVS_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new Nesterovs();
-				else if (args.size() == 1)
-					return new Nesterovs(getOrDefault(args, 0, Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE));
-				else if (args.size() == 2)
+				else if (args.size() <= 2)
 					return new Nesterovs(getOrDefault(args, 0, Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE), // LR
 							getOrDefault(args, 1, Nesterovs.DEFAULT_NESTEROV_MOMENTUM)); // Momentum
 				else 
@@ -160,9 +149,7 @@ public class DL4JUtils {
 			} else if (RMS_PROP_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
 					return new RmsProp();
-				else if (args.size()==1)
-					return new RmsProp(getOrDefault(args, 0, RmsProp.DEFAULT_RMSPROP_LEARNING_RATE));
-				else if (args.size()==3) {
+				else if (args.size()<=3) {
 					return new RmsProp(getOrDefault(args, 0, RmsProp.DEFAULT_RMSPROP_LEARNING_RATE), // LR
 							getOrDefault(args, 1, RmsProp.DEFAULT_RMSPROP_RMSDECAY), // Rms Decay
 							getOrDefault(args, 2, RmsProp.DEFAULT_RMSPROP_EPSILON)  // Epsilon
@@ -190,7 +177,7 @@ public class DL4JUtils {
 
 	private static List<Double> getArgs(String input){
 		List<Double> args = new ArrayList<>();
-		String[] splits = input.split(",");
+		String[] splits = input.split(UPDATER_SUB_PARAM_SPLITTER);
 		if (splits.length>1) {
 			for (int i=1;i<splits.length; i++) {
 				try {
@@ -204,43 +191,43 @@ public class DL4JUtils {
 	}
 	
 	private static String sgdSyntax() {
-		return String.format("%s or %s,<learning rate>",
+		return String.format("%s or %s:<learning rate>",
 				SGD_NAME,SGD_NAME);
 	}
 	private static String adaBeleifSyntax() {
-		return String.format("%s or %s,<learning rate>",
+		return String.format("%s or %s:<learning rate>",
 				ADA_BELEIF_NAME,ADA_BELEIF_NAME);
 	}
 	private static String adaDeltaSyntax() {
-		return String.format("%s or %s,<rho>,<epsilon>",
+		return String.format("%s or %s:<rho>:<epsilon>",
 				ADA_DELTA_NAME,ADA_DELTA_NAME);
 	}
 	private static String adaGradSyntax() {
-		return String.format("%s or %s,<learning rate> or %s,<learning rate>,<epsilon>",
+		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<epsilon>",
 				ADA_GRAD_NAME,ADA_GRAD_NAME,ADA_GRAD_NAME);
 	}
 	private static String adamSyntax() {
-		return String.format("%s or %s,<learning rate> or %s,<learning rate>,<beta1>,<beta2>,<epsilon>",
+		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
 				ADAM_NAME,ADAM_NAME,ADAM_NAME);
 	}
 	private static String adaMaxSyntax() {
-		return String.format("%s or %s,<learning rate> or %s,<learning rate>,<beta1>,<beta2>,<epsilon>",
+		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
 				ADA_MAX_NAME,ADA_MAX_NAME,ADA_MAX_NAME);
 	}
 	private static String amsGradSyntax() {
-		return String.format("%s or %s,<learning rate> or %s,<learning rate>,<beta1>,<beta2>,<epsilon>",
+		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
 				AMS_GRAD_NAME,AMS_GRAD_NAME,AMS_GRAD_NAME);
 	}
 	private static String nAdamSyntax() {
-		return String.format("%s or %s,<learning rate> or %s,<learning rate>,<beta1>,<beta2>,<epsilon>",
+		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
 				N_ADAM_NAME,N_ADAM_NAME,N_ADAM_NAME);
 	}
 	private static String nesterovsSyntax() {
-		return String.format("%s or %s,<learning rate> or %s,<learning rate>,<momentum>",
+		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<momentum>",
 				NESTEROVS_NAME,NESTEROVS_NAME,NESTEROVS_NAME);
 	}
 	private static String rmsPropSyntax() {
-		return String.format("%s or %s,<learning rate> or %s,<learning rate>,<rms decay>,<epsilon>",
+		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<rms decay>:<epsilon>",
 				RMS_PROP_NAME,RMS_PROP_NAME,RMS_PROP_NAME);
 	}
 

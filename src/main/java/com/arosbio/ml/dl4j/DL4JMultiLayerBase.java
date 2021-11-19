@@ -822,5 +822,9 @@ public abstract class DL4JMultiLayerBase
 		if (model != null)
 			model.close();
 	}
+	
+	public String toString() {
+		return getName();
+	}
 
 }
