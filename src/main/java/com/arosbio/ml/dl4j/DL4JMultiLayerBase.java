@@ -57,6 +57,8 @@ import com.arosbio.commons.config.IntegerConfigParameter;
 import com.arosbio.commons.config.NumericConfigParameter;
 import com.arosbio.commons.config.StringConfigParameter;
 import com.arosbio.commons.config.StringListConfigParameter;
+import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
+import com.arosbio.ml.dl4j.eval.EarlyStopScoreListenerFileWrite;
 import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
 import com.arosbio.modeling.CPSignSettings;
 import com.arosbio.modeling.app.cli.params.converters.IntegerListOrRangeConverter;
@@ -68,7 +70,7 @@ import com.google.common.collect.Range;
 import com.google.common.io.Files;
 
 public abstract class DL4JMultiLayerBase 
-	implements MLAlgorithm, Configurable, Closeable {
+implements MLAlgorithm, Configurable, Closeable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
@@ -83,7 +85,7 @@ public abstract class DL4JMultiLayerBase
 
 	//--- Settings - general
 	private long seed = CPSignSettings.getInstance().getRNGSeed();
-	
+
 	//--- Settings - network structure
 	/** The width of the hidden layers in the network - all will have the same width */
 	private int networkWidth = DEFAULT_NETWORK_WIDTH;
@@ -97,12 +99,14 @@ public abstract class DL4JMultiLayerBase
 	private double testSplitFraction = DEFAULT_TEST_SPLIT_FRAC;
 	/** Determines for how many extra epochs to run - without improvement in loss score */
 	private int earlyStoppingTerminateAfter = 10;
-	
+	/** A path that can be resolved as absolute, user-relative or relative */
+	private String scoresOutputFile;
+
 	//--- Settings - regularization
 	private double inputDropOut = 0;
 	private double hiddenLayerDropOut = 0;
-	
-	
+
+
 	//--- Settings - only from when instantiated until trained, not loaded again
 	protected NeuralNetConfiguration.Builder config;
 	protected LossFunctions.LossFunction loss;
@@ -126,7 +130,7 @@ public abstract class DL4JMultiLayerBase
 				.weightInit(DEFAULT_WEIGHT_INIT)
 				.updater(new Nesterovs());
 	}
-	
+
 	public int getInputWidth() {
 		return inputWidth;
 	}
@@ -135,24 +139,24 @@ public abstract class DL4JMultiLayerBase
 		this.loss = lossFunc;
 		this.config = config;
 	}
-	
+
 	/*
 	 * ****************************************************************************
 	 * NETWORK STRUCTURE SETTERS
 	 * 
 	 * ****************************************************************************
 	 */
-	
+
 	public DL4JMultiLayerBase networkWidth(int width) {
 		this.networkWidth = width;
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase numHiddenLayers(int nLayers) {
 		this.numHiddenLayers = nLayers;
 		return this;
 	}
-	
+
 	/**
 	 * Set explicit widths for each hidden layer (i.e. allows different widths for each layer). 
 	 * The first index of the array is for the first layer and so on.. If <code>null</code> is sent, the
@@ -193,12 +197,12 @@ public abstract class DL4JMultiLayerBase
 		this.config.weightInit(init);
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase batchNorm(boolean useBatchNorm) {
 		this.batchNorm = useBatchNorm;
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase lossFunc(LossFunction loss) {
 		this.loss = loss;
 		return this;
@@ -213,12 +217,12 @@ public abstract class DL4JMultiLayerBase
 		this.config.activation(activation);
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase dType(DataType type) {
 		this.dType = type;
 		return this;
 	}
-	
+
 	/*
 	 * ****************************************************************************
 	 * RUNNING CONFIG SETTERS
@@ -230,12 +234,12 @@ public abstract class DL4JMultiLayerBase
 		this.numEpoch = nEpoch;
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase nEpoch(int nEpoch) {
 		this.numEpoch = nEpoch;
 		return this;
 	}
-	
+
 	/**
 	 * Set a fixed mini-batch size, default is to use 10 mini-batches for each epoch. If setting a negative value 
 	 * there will be no mini batches and instead all data will be given for a single batch per epoch.
@@ -246,7 +250,7 @@ public abstract class DL4JMultiLayerBase
 		this.batchSize = batchSize;
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase testSplitFraction(double testFrac) {
 		if (testFrac <0 || testFrac >0.5) {
 			LOGGER.debug("Invalid test fraction: " + testFrac);
@@ -255,7 +259,7 @@ public abstract class DL4JMultiLayerBase
 		this.testSplitFraction = testFrac;
 		return this;
 	}
-	
+
 	/**
 	 * The updater
 	 * @param updater the updater
@@ -265,12 +269,12 @@ public abstract class DL4JMultiLayerBase
 		this.config.updater(updater);
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase optimizer(OptimizationAlgorithm alg) {
 		this.config.optimizationAlgo(alg);
 		return this;
 	}
-	
+
 	/**
 	 * Sets for how many epochs the network should continue training, 
 	 * after seeing no improvement in the loss score
@@ -284,6 +288,11 @@ public abstract class DL4JMultiLayerBase
 		return this;
 	}
 	
+	public DL4JMultiLayerBase lossOutput(String path) {
+		this.scoresOutputFile = path;
+		return this;
+	}
+
 	/**
 	 * Evaluation interval, perform evaluation of loss score every {@code epoch}
 	 * @param epoch how many epochs between evaluation should be done, should be in interval [1..50]
@@ -295,7 +304,7 @@ public abstract class DL4JMultiLayerBase
 		this.evalInterval = epoch;
 		return this;
 	}
-	
+
 
 	/*
 	 * ****************************************************************************
@@ -308,7 +317,7 @@ public abstract class DL4JMultiLayerBase
 		config.weightDecay(decay);
 		return this;
 	}
-	
+
 	/**
 	 * Set the regularization, either the weightDecay (preferred) or L1/L2 weight penalty.
 	 * @param weightDecay a value equal or smaller than zero disable weightDecay regularization
@@ -325,7 +334,7 @@ public abstract class DL4JMultiLayerBase
 		config.weightDecay(Math.max(0,weightDecay));
 		return this;
 	}
-	
+
 	/**
 	 * Drop out for the hidden layer
 	 * @param prob Probprobability of drop-out to occur
@@ -337,7 +346,7 @@ public abstract class DL4JMultiLayerBase
 		this.inputDropOut = prob;
 		return this;
 	}
-	
+
 	/**
 	 * Drop out for all hidden layers
 	 * @param prob probability of drop-out to occur
@@ -423,7 +432,7 @@ public abstract class DL4JMultiLayerBase
 	private static List<String> BATCH_NORM_CONF_NAMES = Arrays.asList("batchNorm");
 	private static List<String> LOSS_FUNC_CONF_NAMES = Arrays.asList("loss","lossFunc");
 	private static List<String> ACTIVATION_CONF_NAMES = Arrays.asList("activation");
-	
+
 	// Running configs
 	private static List<String> N_EPOCH_CONF_NAMES = Arrays.asList("nEpoch", "numEpoch");
 	private static List<String> BATCH_SIZE_CONF_NAMES = Arrays.asList("batchSize", "miniBatch");
@@ -431,14 +440,14 @@ public abstract class DL4JMultiLayerBase
 	private static List<String> UPDATER_CONF_NAMES = Arrays.asList("updater");
 	private static List<String> OPT_CONF_NAMES = Arrays.asList("opt","optimizer");
 	private static List<String> EARLY_STOP_AFTER_CONF_NAMES = Arrays.asList("earlyStopAfter"); 
-	
+
 	// Regularization
 	private static List<String> WEIGHT_DECAY_CONF_NAMES = Arrays.asList("weightDecay");
 	private static List<String> L2_CONF_NAMES = Arrays.asList("l2");
 	private static List<String> L1_CONF_NAMES = Arrays.asList("l1");
 	private static List<String> INPUT_DROP_OUT_CONF_NAMES = Arrays.asList("inputDropOut");
 	private static List<String> HIDDEN_DROP_OUT_CONF_NAMES = Arrays.asList("dropOut");
-	
+
 
 	@Override
 	public List<ConfigParameter> getConfigParameters() {
@@ -485,7 +494,7 @@ public abstract class DL4JMultiLayerBase
 				.addDescription("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc."));
 		confs.add(new NumericConfigParameter(HIDDEN_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.))
 				.addDescription("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc."));
-		
+
 		return confs;
 	}
 
@@ -638,19 +647,28 @@ public abstract class DL4JMultiLayerBase
 
 	protected void copyParametersToNew(DL4JMultiLayerBase cpy) {
 		cpy.config = config.clone();
+
 		cpy.seed = seed;
 		cpy.networkWidth = networkWidth;
 		cpy.numHiddenLayers = numHiddenLayers;
 		if (explicitLayerWidths != null)
 			cpy.explicitLayerWidths = new ArrayList<>(explicitLayerWidths);
+		cpy.batchNorm = batchNorm;
+
 		cpy.numEpoch = numEpoch;
 		cpy.batchSize = batchSize;
-		cpy.batchNorm = batchNorm;
 		cpy.testSplitFraction = testSplitFraction;
-		cpy.saveUpdater = saveUpdater;
+		cpy.earlyStoppingTerminateAfter = earlyStoppingTerminateAfter;
+		cpy.scoresOutputFile = scoresOutputFile;
+
+		cpy.inputDropOut = inputDropOut;
+		cpy.hiddenLayerDropOut = hiddenLayerDropOut;
+
 		cpy.loss = loss;
 		cpy.evalInterval = evalInterval;
+
 		cpy.dType = dType;
+		cpy.saveUpdater = saveUpdater;
 	}
 
 	protected Pair<List<DataRecord>,List<DataRecord>> getInternalTrainTestSplits(List<DataRecord> allRecs){
@@ -666,9 +684,9 @@ public abstract class DL4JMultiLayerBase
 		return Pair.with(train, test);
 	}
 
-	protected void trainNetwork(MultiLayerConfiguration config, 
+	protected void trainNetwork(MultiLayerConfiguration nnConfig, 
 			List<DataRecord> trainingData,
-			boolean isClassification) {
+			boolean isClassification) throws IllegalArgumentException{
 		// Create a tmp dir to save intermediate models
 		File tmpDir = Files.createTempDir();
 
@@ -686,17 +704,33 @@ public abstract class DL4JMultiLayerBase
 		} else {
 			testIter = new INDArrayDataSetIterator(trainConv, batch);
 		}
-		
+
 		EarlyStoppingModelSaver<MultiLayerNetwork> saver = new LocalFileModelSaver(tmpDir);
 		EarlyStoppingConfiguration<MultiLayerNetwork> esConf = new EarlyStoppingConfiguration.Builder<MultiLayerNetwork>()
 				.epochTerminationConditions(new MaxEpochsTerminationCondition(numEpoch), // Max num epochs
 						new ScoreImprovementEpochTerminationCondition(earlyStoppingTerminateAfter,1E-5)) // Check for improvement
-				.evaluateEveryNEpochs(evalInterval) // Evaluate every 1-50 epoch
+				.evaluateEveryNEpochs(evalInterval) // Evaluate every epochInterval 
 				.iterationTerminationConditions(new MaxTimeIterationTerminationCondition(20, TimeUnit.MINUTES)) // Max of 20 minutes
-				.scoreCalculator(new DataSetLossCalculator(testIter, true)) // Calculate test set score
+				.scoreCalculator(new DataSetLossCalculator(testIter, true)) // Calculate test/train set score
 				.modelSaver(saver)
 				.build();
-		EarlyStoppingTrainer trainer = new EarlyStoppingTrainer(esConf,config,trainIter);
+
+		EarlyStoppingTrainer trainer = new EarlyStoppingTrainer(esConf,nnConfig,trainIter);
+
+		// Set up the score listener
+		StringBuilder scoreOutput = new StringBuilder();
+		try {
+			EarlyStopScoreListener listener = scoresOutputFile != null ? new EarlyStopScoreListenerFileWrite(scoresOutputFile, testSplitFraction>0) : new EarlyStopScoreListener(scoreOutput, testSplitFraction>0);
+			if (testSplitFraction>0) {
+				// If using test-examples for scoring - also add train scores 
+				listener.trainScorer(new DataSetLossCalculator(trainIter, true));
+			}
+			trainer.setListener(listener);
+		} catch (IOException e) {
+			LOGGER.debug("Failed setting up score listener",e);
+			throw new IllegalArgumentException(e);
+		}
+
 
 		// Conduct early stopping training
 		EarlyStoppingResult<MultiLayerNetwork> result = trainer.fit();
@@ -705,19 +739,22 @@ public abstract class DL4JMultiLayerBase
 		LOGGER.debug("Finished training using early stopping, metrics{}  termination reason: {}{}  termination details: {}{}  total epochs: {}/{}{}  best epoch: {}",
 				LINE_SEP, result.getTerminationReason(),LINE_SEP, result.getTerminationDetails(),LINE_SEP, result.getTotalEpochs(),numEpoch,LINE_SEP, result.getBestModelEpoch());
 
-		// Log scores 
-		StringBuilder scoreOutput = new StringBuilder();
-		if (testSplitFraction>0)
-			writeLossScores(null, result.getScoreVsEpoch(), scoreOutput);
-		else
-			writeLossScores(result.getScoreVsEpoch(), null, scoreOutput);
-		LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
-		
+		// Log scores in case not written to file
+		if (scoreOutput.length()>0) {
+			LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
+		}
+		//		StringBuilder scoreOutput = new StringBuilder();
+		//		if (testSplitFraction>0)
+		//			writeLossScores(null, result.getScoreVsEpoch(), scoreOutput);
+		//		else
+		//			writeLossScores(result.getScoreVsEpoch(), null, scoreOutput);
+		//		LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
+
 		if (Double.isNaN(result.getBestModelScore())) {
 			LOGGER.debug("The best score was NaN - so the model should be bad - throwing an exception");
 			throw new IllegalArgumentException("The "+getName() + " model could not be fitted using the current parameters - please revise them");
 		}
-		
+
 		model = result.getBestModel();
 		// Set the labels
 		if (isClassification)
@@ -794,9 +831,9 @@ public abstract class DL4JMultiLayerBase
 		if (widths == null || widths.isEmpty()) {
 			throw new IllegalStateException("Need to have at least one hidden layer: please revise network parameters");
 		}
-		
+
 		inputWidth = numIn;
-		
+
 		// If input drop out should be applied
 		if (inputDropOut>0)
 			bldr.layer(new DropoutLayer(1-inputDropOut));
@@ -822,7 +859,7 @@ public abstract class DL4JMultiLayerBase
 		if (model != null)
 			model.close();
 	}
-	
+
 	public String toString() {
 		return getName();
 	}
