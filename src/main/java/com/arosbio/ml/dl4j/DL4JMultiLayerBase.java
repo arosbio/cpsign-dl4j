@@ -7,15 +7,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
 import org.deeplearning4j.earlystopping.EarlyStoppingConfiguration;
 import org.deeplearning4j.earlystopping.EarlyStoppingModelSaver;
@@ -743,13 +740,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		if (scoreOutput.length()>0) {
 			LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
 		}
-		//		StringBuilder scoreOutput = new StringBuilder();
-		//		if (testSplitFraction>0)
-		//			writeLossScores(null, result.getScoreVsEpoch(), scoreOutput);
-		//		else
-		//			writeLossScores(result.getScoreVsEpoch(), null, scoreOutput);
-		//		LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
-
+		
 		if (Double.isNaN(result.getBestModelScore())) {
 			LOGGER.debug("The best score was NaN - so the model should be bad - throwing an exception");
 			throw new IllegalArgumentException("The "+getName() + " model could not be fitted using the current parameters - please revise them");
@@ -759,53 +750,6 @@ implements MLAlgorithm, Configurable, Closeable {
 		// Set the labels
 		if (isClassification)
 			model.setLabels(trainConv.getOneHotMapping().getLabelsND());
-	}
-
-	/**
-	 * Write scores to an {@link Appendable} object
-	 * @param trainScores Scores for train instances
-	 * @param testScores Scores for test instances
-	 * @param a Appendable to write to
-	 * @return {@code true} if anything was written, {@code false} otherwise
-	 */
-	public static boolean writeLossScores(Map<Integer,Double> trainScores, Map<Integer,Double> testScores, Appendable a){
-		boolean hasTrainS = trainScores != null && !trainScores.isEmpty();
-		boolean hasTestS = testScores != null && !testScores.isEmpty();
-		if (!hasTestS && !hasTrainS) {
-			return false;
-		}
-		try (
-				CSVPrinter printer = CSVFormat.DEFAULT.print(a);){
-			// Print header
-			printer.print("Epoch");
-			if (hasTrainS)
-				printer.print("Train Score");
-			if (hasTestS)
-				printer.print("Test Score");
-			printer.println();
-
-			// Print score(s) vs. epoch
-			List<Integer> list = new ArrayList<>();
-			if (hasTestS) list.addAll(testScores.keySet());
-			if (hasTrainS) list.addAll(trainScores.keySet());
-			Collections.sort(list);
-			for (int e : list) {
-				printer.print(e);
-				if (hasTrainS) printer.print(getValue(trainScores, e));
-				if (hasTestS) printer.print(getValue(testScores, e));
-				printer.println();
-			}
-		} catch (IOException e) {
-			LOGGER.error("Failed generating CSV with scores from training, reason: {}",e.getMessage());
-			LOGGER.debug("exception",e);
-			return false;
-		}
-		return true;
-	}
-
-	private static String getValue(Map<Integer,Double> scores,int epoch) {
-		Double s = scores.getOrDefault(epoch, null);
-		return s != null? s.toString() : "-";
 	}
 
 	protected List<Integer> getHiddenLayerWidths(){
