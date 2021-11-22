@@ -33,3 +33,6 @@ libs/
 
 # CPSign licenses
 **.license
+
+# test output dir
+test_out/

@@ -304,7 +304,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 				.l2(1e-4);
 		
 		DLClassifier clf = new DLClassifier(config);
-		clf.numEpoch(100).testSplitFraction(0).numHiddenLayers(3).batchSize(-1).evalInterval(10).lossOutput("some_rel_path/train_out.csv");
+		clf.numEpoch(100).testSplitFraction(0).numHiddenLayers(3).batchSize(-1).evalInterval(10).lossOutput("test_out/train_out.csv");
 		
 		SubSet allData = getIrisClassificationData();
 		allData.shuffle();
