@@ -32,11 +32,12 @@ public class EarlyStopScoreListenerFileWrite extends EarlyStopScoreListener impl
 			} else {
 				File f = new File(UriUtils.resolvePath(path));
 				if (f.exists() && f.isDirectory()) {
-					finalFile = new File(path, DEFAULT_FILE_NAME);
+					finalFile = new File(f, DEFAULT_FILE_NAME);
 				} else if (f.exists() && f.isFile()) {
 					finalFile = f;
 				} else if (! f.exists()) {
 					UriUtils.createParentOfFile(f);
+					finalFile = f;
 				} else {
 					finalFile = f;
 				}

@@ -29,7 +29,7 @@ public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerN
 	private DataSetLossCalculator trainScorer, testScorer;
 
 	public EarlyStopScoreListener(Appendable out, boolean scoresBasedOnTest) throws IOException {
-		printer = CSVFormat.DEFAULT.withAutoFlush(true).print(out);
+		printer = CSVFormat.DEFAULT.withCommentMarker('#').withAutoFlush(true).print(out);
 		this.scoreBasedOnTest = scoresBasedOnTest;
 	}
 

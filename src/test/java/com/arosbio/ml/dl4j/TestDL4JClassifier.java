@@ -295,6 +295,26 @@ public class TestDL4JClassifier extends UnitTestBase {
 		clf.close();
 	}
 	
+	@Test
+	public void testSetPathOfTrainLog() throws Exception {
+		NeuralNetConfiguration.Builder config = new NeuralNetConfiguration.Builder()
+				.activation(Activation.TANH)
+				.weightInit(WeightInit.XAVIER)
+				.updater(new Sgd(0.1))
+				.l2(1e-4);
+		
+		DLClassifier clf = new DLClassifier(config);
+		clf.numEpoch(100).testSplitFraction(0).numHiddenLayers(3).batchSize(-1).evalInterval(10).lossOutput("some_rel_path/train_out.csv");
+		
+		SubSet allData = getIrisClassificationData();
+		allData.shuffle();
+		
+		allData = new Standardizer().fitAndTransform(allData);
+		
+		clf.train(allData);
+		clf.close();
+	}
+	
 	/*
 	 * This specific split (using this rng) made train-examples with less features which set the inputWidth of the network to smaller than
 	 * some of the test-examples - which made caused it to fail with indexoutofbounds in ND4JUtils conversion of the test-examples at predict-time.

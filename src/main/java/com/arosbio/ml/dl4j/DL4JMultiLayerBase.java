@@ -436,7 +436,8 @@ implements MLAlgorithm, Configurable, Closeable {
 	private static List<String> TEST_FRAC_CONF_NAMES = Arrays.asList("testFrac","internalTestFrac");
 	private static List<String> UPDATER_CONF_NAMES = Arrays.asList("updater");
 	private static List<String> OPT_CONF_NAMES = Arrays.asList("opt","optimizer");
-	private static List<String> EARLY_STOP_AFTER_CONF_NAMES = Arrays.asList("earlyStopAfter"); 
+	private static List<String> EARLY_STOP_AFTER_CONF_NAMES = Arrays.asList("earlyStopAfter");
+	private static List<String> TRAIN_LOSS_FILE_PATH_CONF_NAMES = Arrays.asList("lossScoresOutput","trainOutput");
 
 	// Regularization
 	private static List<String> WEIGHT_DECAY_CONF_NAMES = Arrays.asList("weightDecay");
@@ -480,6 +481,8 @@ implements MLAlgorithm, Configurable, Closeable {
 				.addDescription("The optmization algorithm, for furhter info refer to: https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm"));
 		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
 				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));
+		confs.add(new StringConfigParameter(TRAIN_LOSS_FILE_PATH_CONF_NAMES, null)
+				.addDescription("Specify a file or directory to print loss-scores from the training epochs to, if none is given the scores are printed in the logfile instead"));
 		// Regularization
 		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, 0)
 				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
@@ -567,7 +570,7 @@ implements MLAlgorithm, Configurable, Closeable {
 				batchNorm = TypeUtils.asBoolean(c.getValue());
 			} else if (CollectionUtils.containsIgnoreCase(LOSS_FUNC_CONF_NAMES, key)) {
 				try {
-					loss = LossFunction.valueOf(c.getValue().toString());
+					lossFunc(LossFunction.valueOf(c.getValue().toString()));
 				} catch (Exception e) {
 					LOGGER.debug("Tried to set loss-function using input:{}", c.getValue());
 					throw new IllegalArgumentException("Invalid LossFunction: "+c.getValue());
@@ -582,7 +585,7 @@ implements MLAlgorithm, Configurable, Closeable {
 			}
 			// Run configs
 			else if (CollectionUtils.containsIgnoreCase(N_EPOCH_CONF_NAMES, key)) {
-				numEpoch = TypeUtils.asInt(c.getValue());
+				numEpoch(TypeUtils.asInt(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_SIZE_CONF_NAMES, key)) {
 				if (c.getValue() == null)
 					batchSize = null;
@@ -609,7 +612,14 @@ implements MLAlgorithm, Configurable, Closeable {
 				}
 			} else if (CollectionUtils.containsIgnoreCase(EARLY_STOP_AFTER_CONF_NAMES, key)) {
 				earlyStopAfter(TypeUtils.asInt(c.getValue()));
-			} 
+			} else if (CollectionUtils.containsIgnoreCase(TRAIN_LOSS_FILE_PATH_CONF_NAMES, key)) {
+				if (c.getValue() == null || c.getValue() instanceof String)
+					lossOutput((String)c.getValue());
+				else 
+					throw new IllegalArgumentException("Invalid input type for parameter "+TRAIN_LOSS_FILE_PATH_CONF_NAMES.get(0));
+			}
+			
+			
 			// Regularization
 			else if (CollectionUtils.containsIgnoreCase(WEIGHT_DECAY_CONF_NAMES, key)) {
 				double decay = TypeUtils.asDouble(c.getValue());
@@ -717,7 +727,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		// Set up the score listener
 		StringBuilder scoreOutput = new StringBuilder();
 		try {
-			EarlyStopScoreListener listener = scoresOutputFile != null ? new EarlyStopScoreListenerFileWrite(scoresOutputFile, testSplitFraction>0) : new EarlyStopScoreListener(scoreOutput, testSplitFraction>0);
+			EarlyStopScoreListener listener = scoresOutputFile != null ? new EarlyStopScoreListenerFileWrite(scoresOutputFile, testSplitFraction>0,getProperties()) : new EarlyStopScoreListener(scoreOutput, testSplitFraction>0,getProperties());
 			if (testSplitFraction>0) {
 				// If using test-examples for scoring - also add train scores 
 				listener.trainScorer(new DataSetLossCalculator(trainIter, true));
