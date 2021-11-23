@@ -9,7 +9,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<cpsign.version>2.0.0-beta1</cpsign.version>
+		<cpsign.version>2.0.0-beta2</cpsign.version>
 		<dl4j.version>1.0.0-M1.1</dl4j.version>
 		<java.version>1.8</java.version>
 		<surefire.version>3.0.0-M5</surefire.version>

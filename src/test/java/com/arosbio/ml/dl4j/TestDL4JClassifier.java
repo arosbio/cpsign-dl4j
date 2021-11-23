@@ -283,7 +283,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		
 		// Updater
-		params.put("updater", "adam:0.05");
+		params.put("updater", "adam;0.05");
 		params.remove("layers");
 		
 		clf.setConfigParameters(params);
@@ -347,9 +347,12 @@ public class TestDL4JClassifier extends UnitTestBase {
 	 */
 	@Test
 	public void testCLITuneScorer() throws Exception {
+		// Load the true data
 		SubSet data = UnitTestBase.getIrisClassificationData();
 		RobustScaler scaler = new RobustScaler();
 		data = scaler.fitAndTransform(data);
+		
+		// Save the data as a fake CPSign precomputed data set
 		ChemDataset ds = new ChemDataset(DescriptorFactory.getCDKDescriptorsNo3D().subList(0, 5));
 		ds.setDataset(data);
 		ds.initializeDescriptors();
@@ -359,10 +362,10 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		CPSignApp.main(new String[] {TuneScorer.CMD_NAME, 
 			"--data-set",dataFile.toString(),
-			"--scorer", "dl-classifier:nEpoch=100", // this is not optimal, simply trying if things are picked up correctly
+			"--scorer", "dl-classifier:nEpoch=100:updater=Sgd;0.5:trainOutput=test_out/tune_dl_clf.csv", // this is not optimal, simply trying if things are picked up correctly
 			"--license",UnitTestBase.getFirstLicenseFile().toString(),
 			"--test-strategy", "TestTrainSplit",
-			"--grid", "updater=Sgd:0.01,Sgd:0.1",
+			"--grid", "updater=Sgd;0.01,Sgd;0.1", //"width=5,10,15", //
 			"-rf", "tsv"
 		});
 	}

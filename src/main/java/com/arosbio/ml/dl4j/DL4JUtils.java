@@ -22,7 +22,7 @@ import com.arosbio.commons.TypeUtils;
 public class DL4JUtils {
 
 	private static final String LINE_SEP = System.lineSeparator();
-	public static final String UPDATER_SUB_PARAM_SPLITTER = ":";
+	public static final String UPDATER_SUB_PARAM_SPLITTER = ";";
 
 	private static final String SGD_NAME ="SGD";
 	private static final String ADA_BELEIF_NAME = "AdaBelief";
@@ -191,43 +191,43 @@ public class DL4JUtils {
 	}
 	
 	private static String sgdSyntax() {
-		return String.format("%s or %s:<learning rate>",
+		return String.format("%s or %s;<learning rate>",
 				SGD_NAME,SGD_NAME);
 	}
 	private static String adaBeleifSyntax() {
-		return String.format("%s or %s:<learning rate>",
+		return String.format("%s or %s;<learning rate>",
 				ADA_BELEIF_NAME,ADA_BELEIF_NAME);
 	}
 	private static String adaDeltaSyntax() {
-		return String.format("%s or %s:<rho>:<epsilon>",
+		return String.format("%s or %s;<rho>;<epsilon>",
 				ADA_DELTA_NAME,ADA_DELTA_NAME);
 	}
 	private static String adaGradSyntax() {
-		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<epsilon>",
+		return String.format("%s or %s;<learning rate> or %s;<learning rate>;<epsilon>",
 				ADA_GRAD_NAME,ADA_GRAD_NAME,ADA_GRAD_NAME);
 	}
 	private static String adamSyntax() {
-		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
+		return String.format("%s or %s;<learning rate> or %s;<learning rate>;<beta1>;<beta2>;<epsilon>",
 				ADAM_NAME,ADAM_NAME,ADAM_NAME);
 	}
 	private static String adaMaxSyntax() {
-		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
+		return String.format("%s or %s;<learning rate> or %s;<learning rate>;<beta1>;<beta2>;<epsilon>",
 				ADA_MAX_NAME,ADA_MAX_NAME,ADA_MAX_NAME);
 	}
 	private static String amsGradSyntax() {
-		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
+		return String.format("%s or %s;<learning rate> or %s;<learning rate>;<beta1>;<beta2>;<epsilon>",
 				AMS_GRAD_NAME,AMS_GRAD_NAME,AMS_GRAD_NAME);
 	}
 	private static String nAdamSyntax() {
-		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<beta1>:<beta2>:<epsilon>",
+		return String.format("%s or %s;<learning rate> or %s;<learning rate>;<beta1>;<beta2>;<epsilon>",
 				N_ADAM_NAME,N_ADAM_NAME,N_ADAM_NAME);
 	}
 	private static String nesterovsSyntax() {
-		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<momentum>",
+		return String.format("%s or %s;<learning rate> or %s;<learning rate>;<momentum>",
 				NESTEROVS_NAME,NESTEROVS_NAME,NESTEROVS_NAME);
 	}
 	private static String rmsPropSyntax() {
-		return String.format("%s or %s:<learning rate> or %s:<learning rate>:<rms decay>:<epsilon>",
+		return String.format("%s or %s;<learning rate> or %s;<learning rate>;<rms decay>;<epsilon>",
 				RMS_PROP_NAME,RMS_PROP_NAME,RMS_PROP_NAME);
 	}
 
