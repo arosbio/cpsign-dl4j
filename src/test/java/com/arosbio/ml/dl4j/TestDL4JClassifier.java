@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
@@ -73,6 +74,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 			.numHiddenLayers(3)
 			.batchSize(-1)
 			.updater(new Sgd(0.1))
+			.gradientNorm(GradientNormalization.ClipL2PerLayer)
 			.activation(Activation.TANH);
 		
 		SubSet allData = getIrisClassificationData();

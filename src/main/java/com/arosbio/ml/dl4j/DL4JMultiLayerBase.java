@@ -25,6 +25,7 @@ import org.deeplearning4j.earlystopping.termination.ScoreImprovementEpochTermina
 import org.deeplearning4j.earlystopping.trainer.BaseEarlyStoppingTrainer;
 import org.deeplearning4j.earlystopping.trainer.EarlyStoppingTrainer;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
+import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
@@ -211,6 +212,18 @@ implements MLAlgorithm, Configurable, Closeable {
 	public DL4JMultiLayerBase batchNorm(boolean useBatchNorm) {
 		this.batchNorm = useBatchNorm;
 		return this;
+	}
+	
+	public DL4JMultiLayerBase gradientNorm(GradientNormalization norm) {
+		if (norm == null)
+			config.gradientNormalization(GradientNormalization.None);
+		else
+			config.gradientNormalization(norm);
+		return this;
+	}
+	
+	public DL4JMultiLayerBase gradientNormalization(GradientNormalization norm) {
+		return gradientNorm(norm);
 	}
 
 	public DL4JMultiLayerBase lossFunc(LossFunction loss) {
@@ -440,6 +453,7 @@ implements MLAlgorithm, Configurable, Closeable {
 	private static List<String> HIDDEN_LAYER_WIDTH_NAMES = Arrays.asList("layers","layerWidths");
 	private static List<String> WEIGHT_INIT_CONF_NAMES = Arrays.asList("weightInit");
 	private static List<String> BATCH_NORM_CONF_NAMES = Arrays.asList("batchNorm");
+	private static List<String> GRAD_NORM_CONF_NAMES = Arrays.asList("gradNorm","gradientNorm");
 	private static List<String> LOSS_FUNC_CONF_NAMES = Arrays.asList("loss","lossFunc");
 	private static List<String> ACTIVATION_CONF_NAMES = Arrays.asList("activation");
 
@@ -474,6 +488,8 @@ implements MLAlgorithm, Configurable, Closeable {
 				.addDescription("Weight initialization function/distribution. See Deeplearning4j guides for further details."));
 		confs.add(new BooleanConfigParameter(BATCH_NORM_CONF_NAMES, false, Arrays.asList(true,false))
 				.addDescription("Add batch normalization between all the dense layers"));
+		confs.add(new EnumConfigParameter<>(GRAD_NORM_CONF_NAMES, EnumSet.allOf(GradientNormalization.class), GradientNormalization.None)
+				.addDescription("Add gradient normalization, applied to all layers"));
 		confs.add(new EnumConfigParameter<>(LOSS_FUNC_CONF_NAMES, EnumSet.allOf(LossFunction.class),loss)
 				.addDescription("The loss function of the network"));
 		confs.add(new EnumConfigParameter<>(ACTIVATION_CONF_NAMES, EnumSet.allOf(Activation.class),Activation.RELU)
@@ -495,7 +511,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
 				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));
 		confs.add(new StringConfigParameter(TRAIN_LOSS_FILE_PATH_CONF_NAMES, null)
-				.addDescription("Specify a file or directory to print loss-scores from the training epochs to, if none is given the scores are printed in the logfile instead"));
+				.addDescription("Specify a file or directory to print loss-scores from the training epochs to (in csv format), default is otherwise to print them in the logfile"));
 		// Regularization
 		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, 0)
 				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
@@ -581,6 +597,16 @@ implements MLAlgorithm, Configurable, Closeable {
 				}
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
 				batchNorm = TypeUtils.asBoolean(c.getValue());
+			} else if (CollectionUtils.containsIgnoreCase(GRAD_NORM_CONF_NAMES, key)) {
+				if (c.getValue()==null) {
+					gradientNorm(null);
+				} else if (c.getValue() instanceof GradientNormalization) {
+					gradientNorm((GradientNormalization)c.getValue());
+				} else if (c.getValue() instanceof String){
+					gradientNorm(GradientNormalization.valueOf(c.getValue().toString()));
+				} else {
+					throw new IllegalArgumentException("Invalid gradientNorm value: " + c.getValue());
+				}
 			} else if (CollectionUtils.containsIgnoreCase(LOSS_FUNC_CONF_NAMES, key)) {
 				try {
 					lossFunc(LossFunction.valueOf(c.getValue().toString()));
