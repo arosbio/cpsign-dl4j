@@ -22,6 +22,7 @@ import org.deeplearning4j.earlystopping.scorecalc.DataSetLossCalculator;
 import org.deeplearning4j.earlystopping.termination.MaxEpochsTerminationCondition;
 import org.deeplearning4j.earlystopping.termination.MaxTimeIterationTerminationCondition;
 import org.deeplearning4j.earlystopping.termination.ScoreImprovementEpochTerminationCondition;
+import org.deeplearning4j.earlystopping.trainer.BaseEarlyStoppingTrainer;
 import org.deeplearning4j.earlystopping.trainer.EarlyStoppingTrainer;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -37,12 +38,12 @@ import org.javatuples.Pair;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.activations.IActivation;
 import org.nd4j.linalg.api.buffer.DataType;
+import org.nd4j.linalg.dataset.AsyncDataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.arosbio.commons.CollectionUtils;
@@ -66,11 +67,23 @@ import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+
 public abstract class DL4JMultiLayerBase 
 implements MLAlgorithm, Configurable, Closeable {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(DL4JMultiLayerBase.class);
+	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
+	
+	static {
+		Logger earlyStopLogger = (Logger) LoggerFactory.getLogger(BaseEarlyStoppingTrainer.class);
+		Logger dataIterLogger = (Logger) LoggerFactory.getLogger(AsyncDataSetIterator.class);
+		Logger scoreImproveCondLogger = (Logger) LoggerFactory.getLogger(ScoreImprovementEpochTerminationCondition.class);
+		earlyStopLogger.setLevel(Level.ERROR);
+		dataIterLogger.setLevel(Level.INFO);
+		scoreImproveCondLogger.setLevel(Level.WARN);
+	}
 
 	// Defaults
 	public static final int DEFAULT_NUM_HIDDEN_LAYERS = 5;
