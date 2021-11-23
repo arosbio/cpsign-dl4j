@@ -369,5 +369,27 @@ public class TestDL4JClassifier extends UnitTestBase {
 			"-rf", "tsv"
 		});
 	}
+	
+	@Test
+	public void testClonePredictor() {
+		DLClassifier clf = new DLClassifier();
+		clf.numEpoch(200) //1000
+			.testSplitFraction(0)
+			.numHiddenLayers(3)
+			.batchSize(-1)
+			.updater(new Sgd(0.1))
+			.lossOutput("some_path/file.csv")
+			.networkWidth(42)
+			.activation(Activation.TANH);
+		
+		DLClassifier clone = clf.clone();
+		
+		// Verify settings are the same
+		Assert.assertEquals(clf.getProperties(), clone.getProperties());
+		
+		
+		clf.close();
+		clone.close();
+	}
 
 }
