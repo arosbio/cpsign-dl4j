@@ -130,6 +130,44 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 	}
 	
+	@Test
+	public void trainWithDifferentTestBatchFrac() throws IllegalArgumentException, IOException {
+		// Create a tmp file to write scores to
+		File tmpScoresFile = File.createTempFile("scores", ".csv");
+		tmpScoresFile.deleteOnExit();
+		
+		DLClassifier clf = new DLClassifier();
+		clf.numEpoch(50) // don't care if it's good or not, do not let it run to optimal weights
+			.testSplitFraction(0.1) // 150 all together, 10% internal test --> 15 test examples
+			.numHiddenLayers(3)
+			.batchSize(16) // set batch to 16 to not get a single batch for the test-set
+			.updater(new Sgd(0.1))
+			.lossOutput(tmpScoresFile.toString())
+			.gradientNorm(GradientNormalization.ClipL2PerLayer)
+			.activation(Activation.TANH);
+		
+		SubSet allData = getIrisClassificationData();
+		
+		// Standardize training data 
+		Standardizer std = new Standardizer();
+		std.fitAndTransform(allData);
+		
+		// Train it
+		clf.train(allData);
+		
+		DLClassifier clf2 = clf.clone();
+		clf2.testSplitFraction(.2)
+		.batchSize(15); // 20% test-split should be 30 examples, and batch size 15 will be 2 batches
+		
+		clf2.train(allData);
+		
+		clf.close();
+		clf2.close();
+		
+//		String scores = IOUtils.toString(tmpScoresFile.toURI(), StandardCharsets.UTF_8);
+//		System.err.println(scores);
+	}
+	
 	
 	
 	@Test
@@ -349,6 +387,13 @@ public class TestDL4JClassifier extends UnitTestBase {
 	 */
 	@Test
 	public void testCLITuneScorer() throws Exception {
+		// Remove earlier files (if any)
+		String relativeOutFile = "test_out/best_params.txt";
+		try {
+			new File(new File("").getAbsoluteFile(),relativeOutFile).delete();
+		} catch (Exception e) {}
+		
+		
 		// Load the true data
 		SubSet data = UnitTestBase.getIrisClassificationData();
 		RobustScaler scaler = new RobustScaler();
@@ -368,7 +413,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 			"--license",UnitTestBase.getFirstLicenseFile().toString(),
 			"--test-strategy", "TestTrainSplit",
 			"--grid", "updater=Sgd;0.01,Sgd;0.1", //"width=5,10,15", //
-			"-rf", "tsv"
+			"-rf", "tsv",
+			"--generate-@-file", relativeOutFile
 		});
 	}
 	

@@ -315,6 +315,10 @@ implements MLAlgorithm, Configurable, Closeable {
 		this.scoresOutputFile = path;
 		return this;
 	}
+	
+	public DL4JMultiLayerBase lossScores(String path) {
+		return lossOutput(path);
+	}
 
 	/**
 	 * Evaluation interval, perform evaluation of loss score every {@code epoch}
@@ -502,7 +506,7 @@ implements MLAlgorithm, Configurable, Closeable {
 						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch)."));
 		confs.add(new NumericConfigParameter(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC, Range.closed(0., .5))
 				.addDescription("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead."));
-		confs.add(new StringConfigParameter(UPDATER_CONF_NAMES, "Nesterovs,"+Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE+","+Nesterovs.DEFAULT_NESTEROV_MOMENTUM)
+		confs.add(new StringConfigParameter(UPDATER_CONF_NAMES, "Nesterovs;"+Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE+";"+Nesterovs.DEFAULT_NESTEROV_MOMENTUM)
 				.addDescription("Set the updater (https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm). "
 						+ "Using the Java API this can be concrete instances of the IUpdater interface, including scheduling for e.g. learning rate. For CLI users no scheduling is possible and the "
 						+ "following syntaxes are possible to use (replace the <param> with concrete floating point values);"+LINE_SEP+DL4JUtils.supportedUpdaterInput()));
@@ -746,7 +750,10 @@ implements MLAlgorithm, Configurable, Closeable {
 		DataSetIterator testIter = null;
 		if (testSplitFraction >0) {
 			DataConverter testConv = isClassification ? DataConverter.classification(trainTest.getValue1(), trainConv.getNumAttributes(), trainConv.getOneHotMapping()) : DataConverter.regression(trainTest.getValue1(),trainConv.getNumAttributes());
-			testIter = new INDArrayDataSetIterator(testConv, batch);
+			// Check if batch size is OK for the test-set (that should be much smaller), otherwise pass all records at the same time
+			int nTestEx = trainTest.getValue1().size();
+			int testBatchSize = (nTestEx / batch) >= 2 ? batch : nTestEx;
+			testIter = new INDArrayDataSetIterator(testConv, testBatchSize);
 		} else {
 			testIter = new INDArrayDataSetIterator(trainConv, batch);
 		}
