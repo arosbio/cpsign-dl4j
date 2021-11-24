@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import org.deeplearning4j.nn.weights.IWeightInit;
+import org.deeplearning4j.nn.weights.WeightInit;
+import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.activations.IActivation;
 import org.nd4j.linalg.learning.config.AMSGrad;
 import org.nd4j.linalg.learning.config.AdaBelief;
 import org.nd4j.linalg.learning.config.AdaDelta;
@@ -48,7 +52,7 @@ public class DL4JUtils {
 			this.expectedSyntax = expectedSyntax;
 		}
 	}
-	
+
 	public static IUpdater toUpdater(String input) {
 		if (input == null || input.trim().isEmpty())
 			throw new IllegalArgumentException("Invalid updater <null>");
@@ -166,7 +170,7 @@ public class DL4JUtils {
 			throw new IllegalArgumentException("Invalid Updater: " + input);
 		}
 	}
-	
+
 	private static double getOrDefault(List<Double> lst, int index, double fallback) {
 		try {
 			Double d = lst.get(index);
@@ -189,7 +193,7 @@ public class DL4JUtils {
 		}
 		return args;
 	}
-	
+
 	private static String sgdSyntax() {
 		return String.format("%s or %s;<learning rate>",
 				SGD_NAME,SGD_NAME);
@@ -231,6 +235,51 @@ public class DL4JUtils {
 				RMS_PROP_NAME,RMS_PROP_NAME,RMS_PROP_NAME);
 	}
 
+	public static String toString(IUpdater updater) {
+		if (updater instanceof Sgd) {
+			Sgd u = (Sgd) updater;
+			return SGD_NAME+UPDATER_SUB_PARAM_SPLITTER+u.getLearningRate();
+		} else if (updater instanceof AdaBelief) {
+			AdaBelief u = (AdaBelief) updater;
+			return toNiceString(ADA_BELEIF_NAME,u.getLearningRate(), u.getBeta1(), u.getBeta2(), u.getEpsilon());
+		} else if (updater instanceof AdaDelta) {
+			AdaDelta u = (AdaDelta) updater;
+			return toNiceString(ADA_DELTA_NAME,u.getRho(),u.getEpsilon());
+		} else if (updater instanceof AdaGrad) {
+			AdaGrad u = (AdaGrad) updater;
+			return toNiceString(ADA_GRAD_NAME,u.getLearningRate(),u.getEpsilon());
+		} else if (updater instanceof Adam) {
+			Adam u = (Adam)updater;
+			return toNiceString(ADAM_NAME,u.getLearningRate(), u.getBeta1(), u.getBeta2(), u.getEpsilon());
+		} else if (updater instanceof AdaMax) {
+			AdaMax u = (AdaMax)updater;
+			return toNiceString(ADA_MAX_NAME, u.getLearningRate(), u.getBeta1(), u.getBeta2(), u.getEpsilon());
+		} else if (updater instanceof AMSGrad) {
+			AMSGrad u = (AMSGrad) updater;
+			return toNiceString(AMS_GRAD_NAME, u.getLearningRate(), u.getBeta1(), u.getBeta2(), u.getEpsilon());
+		} else if (updater instanceof Nadam) {
+			Nadam u = (Nadam) updater;
+			return toNiceString(N_ADAM_NAME, u.getLearningRate(), u.getBeta1(), u.getBeta2(), u.getEpsilon());
+		} else if (updater instanceof Nesterovs) {
+			Nesterovs u = (Nesterovs) updater;
+			return toNiceString(NESTEROVS_NAME, u.getLearningRate(), u.getMomentum());
+		} else if (updater instanceof NoOp) {
+			return NO_OP_NAME;
+		} else if (updater instanceof RmsProp) {
+			RmsProp u = (RmsProp) updater;
+			return toNiceString(RMS_PROP_NAME, u.getLearningRate(),u.getRmsDecay(),u.getEpsilon());
+		} 
+		throw new IllegalArgumentException("Unsupported updater: "+updater.toString());
+	}
+
+	private static String toNiceString(Object... nameAndParams) {
+		StringBuilder sb=new StringBuilder();
+		for (int i=0;i<nameAndParams.length-1;i++)
+			sb.append(nameAndParams[i]).append(UPDATER_SUB_PARAM_SPLITTER);
+		sb.append(nameAndParams[nameAndParams.length-1]);
+		return sb.toString();
+	}
+
 	public static String supportedUpdaterInput() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(sgdSyntax()).append(LINE_SEP);
@@ -247,4 +296,29 @@ public class DL4JUtils {
 		return sb.toString();
 	}
 
+	public static WeightInit reverseLookup(IWeightInit fun) {
+		for (WeightInit v : WeightInit.values()) {
+			try {
+				if (v.getWeightInitFunction().getClass().equals(fun.getClass())) {
+					return v;
+				}
+			} catch (Exception e) {
+				// In case the weight init function requires some additional parameters
+			}
+		}
+		throw new IllegalArgumentException("Could not find the correct weightInit function for class: " + fun.getClass().getName());
+	}
+
+	public static Activation reverseLookup(IActivation fun) {
+		for (Activation v : Activation.values()) {
+			try {
+				if (v.getActivationFunction().getClass().equals(fun.getClass())) {
+					return v;
+				}
+			} catch (Exception e) {
+				// In case the activation function requires some additional parameters
+			}
+		}
+		throw new IllegalArgumentException("Could not find the correct activation function for class: " + fun.getClass().getName());
+	}
 }

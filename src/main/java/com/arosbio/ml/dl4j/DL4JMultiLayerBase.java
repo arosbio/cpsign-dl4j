@@ -133,17 +133,18 @@ implements MLAlgorithm, Configurable, Closeable {
 	/** Only != null when model has been trained */
 	protected transient MultiLayerNetwork model;
 
-
+	/*
+	 * ****************************************************************************
+	 * CONSTRUCTORS
+	 * 
+	 * ****************************************************************************
+	 */
 	public DL4JMultiLayerBase(LossFunction lossFunc) {
 		this.loss = lossFunc;
 		config = new NeuralNetConfiguration.Builder()
 				.activation(Activation.RELU)
 				.weightInit(DEFAULT_WEIGHT_INIT)
 				.updater(new Nesterovs());
-	}
-
-	public int getInputWidth() {
-		return inputWidth;
 	}
 
 	public DL4JMultiLayerBase(LossFunction lossFunc, NeuralNetConfiguration.Builder config) {
@@ -392,20 +393,62 @@ implements MLAlgorithm, Configurable, Closeable {
 	 * 
 	 * ****************************************************************************
 	 */
-
+	
+	public int getInputWidth() {
+		return inputWidth;
+	}
+	
 	public Map<String, Object> getProperties() {
 		Map<String,Object> p = new HashMap<>();
+		// General CPSign stuff
 		p.put(PropertyFileSettings.ML_IMPL_NAME_KEY, getName());
 		p.put(PropertyFileSettings.ML_IMPL_KEY, getID());
-		p.put("hiddenLayers", getHiddenLayerWidths());
 		p.put(PropertyFileSettings.ML_SEED_VALUE_KEY, seed);
-		p.put("nEpoch", numEpoch);
-		p.put("batchSize", batchSize);
-		p.put("usesBatchNorm", batchNorm);
-		p.put("internalTestFraction", testSplitFraction);
-		p.put("earlyStopTerminateAfter", earlyStoppingTerminateAfter);
-		p.put("lossFunc", loss.name());
+		
+		// Network structure
+		p.put(HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0), toCPSignConfigList(getHiddenLayerWidths()));
+		try {
+			p.put(WEIGHT_INIT_CONF_NAMES.get(0), DL4JUtils.reverseLookup(config.getWeightInitFn()).toString()); 
+		} catch (Exception e) {
+			LOGGER.warn("Could not set the correct {} parameter in the properties",WEIGHT_INIT_CONF_NAMES.get(0));
+		}
+		p.put(BATCH_NORM_CONF_NAMES.get(0), batchNorm);
+		p.put(GRAD_NORM_CONF_NAMES.get(0), config.getGradientNormalization().name());
+		p.put(LOSS_FUNC_CONF_NAMES.get(0), loss.name());
+		p.put(ACTIVATION_CONF_NAMES.get(0), DL4JUtils.reverseLookup(config.getActivationFn()).toString()); 
+		
+		// Run configs
+		p.put(N_EPOCH_CONF_NAMES.get(0), numEpoch);
+		// only add if != null
+		if (batchSize != null)
+			p.put(BATCH_SIZE_CONF_NAMES.get(0), batchSize);
+		p.put(TEST_FRAC_CONF_NAMES.get(0), testSplitFraction);
+		p.put(UPDATER_CONF_NAMES.get(0), DL4JUtils.toString(config.getIUpdater()));
+		p.put(OPT_CONF_NAMES.get(0), config.getOptimizationAlgo().toString());
+		p.put(EARLY_STOP_AFTER_CONF_NAMES.get(0), earlyStoppingTerminateAfter);
+		if (scoresOutputFile != null)
+			p.put(TRAIN_LOSS_FILE_PATH_CONF_NAMES.get(0), scoresOutputFile);
+		
+		// Regularization
+//		p.put(WEIGHT_DECAY_CONF_NAMES.get(0), config.); // TODO
+//		p.put(L2_CONF_NAMES.get(0), config.get); // TODO
+//		p.put(L1_CONF_NAMES.get(0), config.get); // TODO
+//		p.put(INPUT_DROP_OUT_CONF_NAMES.get(0), config.get); // TODO
+//		p.put(HIDDEN_DROP_OUT_CONF_NAMES.get(0), config.getHi); //TODO
+		
 		return p;
+	}
+	
+	private static String toCPSignConfigList(List<?> list) {
+		if (list == null || list.isEmpty())
+			return "";
+		StringBuilder sb = new StringBuilder();
+		for (int i=0; i<list.size()-1; i++) {
+			sb.append(list.get(i)).append(',');
+		}
+		// Add last index
+		sb.append(list.get(list.size()-1));
+		return sb.toString();
 	}
 
 	public void setSeed(long seed) {
@@ -454,7 +497,7 @@ implements MLAlgorithm, Configurable, Closeable {
 	// Structure of the network
 	private static List<String> NET_WIDTH_CONF_NAMES = Arrays.asList("width","networkWidth","hiddenLayerWidth");
 	private static List<String> N_HIDDEN_CONF_NAMES = Arrays.asList("depth","numHidden","numHiddenLayers");
-	private static List<String> HIDDEN_LAYER_WIDTH_NAMES = Arrays.asList("layers","layerWidths");
+	private static List<String> HIDDEN_LAYER_WIDTH_CONF_NAMES = Arrays.asList("layers","layerWidths");
 	private static List<String> WEIGHT_INIT_CONF_NAMES = Arrays.asList("weightInit");
 	private static List<String> BATCH_NORM_CONF_NAMES = Arrays.asList("batchNorm");
 	private static List<String> GRAD_NORM_CONF_NAMES = Arrays.asList("gradNorm","gradientNorm");
@@ -486,7 +529,7 @@ implements MLAlgorithm, Configurable, Closeable {
 				.addDescription("The width of each hidden layer, the input and output-layers are defined by the required input and output"));
 		confs.add(new IntegerConfigParameter(N_HIDDEN_CONF_NAMES, DEFAULT_NUM_HIDDEN_LAYERS)
 				.addDescription("Number of hidden layers"));
-		confs.add(new StringListConfigParameter(HIDDEN_LAYER_WIDTH_NAMES, null)
+		confs.add(new StringListConfigParameter(HIDDEN_LAYER_WIDTH_CONF_NAMES, null)
 				.addDescription(String.format("Set custom layer widths for each layer, setting this will ignore the parameters %s and %s",NET_WIDTH_CONF_NAMES.get(0),N_HIDDEN_CONF_NAMES.get(0))));
 		confs.add(new EnumConfigParameter<>(WEIGHT_INIT_CONF_NAMES, EnumSet.allOf(WeightInit.class),DEFAULT_WEIGHT_INIT)
 				.addDescription("Weight initialization function/distribution. See Deeplearning4j guides for further details."));
@@ -542,7 +585,7 @@ implements MLAlgorithm, Configurable, Closeable {
 				networkWidth = TypeUtils.asInt(c.getValue());
 			} else if (CollectionUtils.containsIgnoreCase(N_HIDDEN_CONF_NAMES, key)) {
 				numHiddenLayers = TypeUtils.asInt(c.getValue());
-			} else if (CollectionUtils.containsIgnoreCase(HIDDEN_LAYER_WIDTH_NAMES, key)) {
+			} else if (CollectionUtils.containsIgnoreCase(HIDDEN_LAYER_WIDTH_CONF_NAMES, key)) {
 				try {
 					List<Integer> tmp = new ArrayList<>();
 					if (c.getValue() == null || c.getValue().toString().equalsIgnoreCase("null")) {
@@ -571,15 +614,15 @@ implements MLAlgorithm, Configurable, Closeable {
 							tmp.addAll(new IntegerListOrRangeConverter().convert(s));
 						}
 					} else {
-						LOGGER.debug("Invalid argument type for parameter {}: {}",HIDDEN_LAYER_WIDTH_NAMES,c.getValue());
-						throw new IllegalArgumentException("Invalid argument for config parameter " + HIDDEN_LAYER_WIDTH_NAMES.get(0));
+						LOGGER.debug("Invalid argument type for parameter {}: {}",HIDDEN_LAYER_WIDTH_CONF_NAMES,c.getValue());
+						throw new IllegalArgumentException("Invalid argument for config parameter " + HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0));
 					}
 
 					LOGGER.debug("Collected widths: " + tmp);
 					// Verify all withs are >0
 					for (int w : tmp) {
 						if (w <= 0)
-							throw new IllegalArgumentException("Invalid argument for config "+HIDDEN_LAYER_WIDTH_NAMES.get(0) + ": widths cannot be <=0, got: " + w);
+							throw new IllegalArgumentException("Invalid argument for config "+HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0) + ": widths cannot be <=0, got: " + w);
 					}
 
 					// Here configuration was successful, set the updated list
@@ -589,8 +632,8 @@ implements MLAlgorithm, Configurable, Closeable {
 					// This should probably be formatted correctly - pass it along
 					throw e;
 				} catch (Exception e) {
-					LOGGER.debug("Invalid argument for {}: {}",HIDDEN_LAYER_WIDTH_NAMES, c.getValue());
-					throw new IllegalArgumentException("Invalid input for config " + HIDDEN_LAYER_WIDTH_NAMES.get(0) + ": " + c.getValue());
+					LOGGER.debug("Invalid argument for {}: {}",HIDDEN_LAYER_WIDTH_CONF_NAMES, c.getValue());
+					throw new IllegalArgumentException("Invalid input for config " + HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0) + ": " + c.getValue());
 				}
 			} else if (CollectionUtils.containsIgnoreCase(WEIGHT_INIT_CONF_NAMES, key)){
 				try {

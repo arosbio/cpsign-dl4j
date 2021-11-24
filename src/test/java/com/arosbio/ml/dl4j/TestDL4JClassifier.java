@@ -39,6 +39,7 @@ import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
 import com.arosbio.modeling.CPSignSettings;
 import com.arosbio.modeling.app.cli.CPSignApp;
 import com.arosbio.modeling.app.cli.ExplainArgument;
+import com.arosbio.modeling.app.cli.Train;
 import com.arosbio.modeling.app.cli.TuneScorer;
 import com.arosbio.modeling.cheminf.ChemDataset;
 import com.arosbio.modeling.cheminf.NamedLabels;
@@ -412,9 +413,22 @@ public class TestDL4JClassifier extends UnitTestBase {
 			"--scorer", "dl-classifier:nEpoch=100:updater=Sgd;0.5:trainOutput=test_out/tune_dl_clf.csv", // this is not optimal, simply trying if things are picked up correctly
 			"--license",UnitTestBase.getFirstLicenseFile().toString(),
 			"--test-strategy", "TestTrainSplit",
-			"--grid", "updater=Sgd;0.01,Sgd;0.1", //"width=5,10,15", //
+			"--grid", "updater=Sgd;0.01", //,Sgd;0.1", //"width=5,10,15", //
 			"-rf", "tsv",
 			"--generate-@-file", relativeOutFile
+		});
+		
+		
+		// Test to train a model using the @file - to check if cpsign can parse it correctly
+		File trainedModel = File.createTempFile("trained-predictor", ".zip");
+		CPSignApp.main(new String[] {
+				Train.CMD_NAME,
+				"--data-set", dataFile.toString(),
+				// The settings produced in tune-scorer above
+				"@"+relativeOutFile,
+				"-mo", trainedModel.getAbsolutePath(),
+				"--license",UnitTestBase.getFirstLicenseFile().toString(),
+				
 		});
 	}
 	
@@ -431,6 +445,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 			.activation(Activation.TANH);
 		
 		DLClassifier clone = clf.clone();
+		
+//		System.err.println(clf.getProperties());
 		
 		// Verify settings are the same
 		Assert.assertEquals(clf.getProperties(), clone.getProperties());

@@ -1,5 +1,6 @@
 package com.arosbio.ml.dl4j;
 
+import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.Assert;
 import org.junit.Test;
 import org.nd4j.linalg.learning.config.AMSGrad;
@@ -79,6 +80,11 @@ public class TestDL4JUtils {
 		Assert.assertTrue(updater instanceof RmsProp);
 		Assert.assertEquals(.5, ((RmsProp)updater).getLearningRate(),0.0001);
 		Assert.assertEquals(.25, ((RmsProp)updater).getRmsDecay(),0.0001);
+	}
+	
+	@Test
+	public void testReverseWeightInit() {
+		Assert.assertTrue(DL4JUtils.reverseLookup(WeightInit.XAVIER.getWeightInitFunction()).equals(WeightInit.XAVIER));
 	}
 
 }
