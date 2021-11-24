@@ -76,7 +76,7 @@ implements MLAlgorithm, Configurable, Closeable {
 
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
-	
+
 	static {
 		Logger earlyStopLogger = (Logger) LoggerFactory.getLogger(BaseEarlyStoppingTrainer.class);
 		Logger dataIterLogger = (Logger) LoggerFactory.getLogger(AsyncDataSetIterator.class);
@@ -114,6 +114,7 @@ implements MLAlgorithm, Configurable, Closeable {
 	private String scoresOutputFile;
 
 	//--- Settings - regularization
+	private transient double l1=0, l2=0, weightDecay=0;
 	private double inputDropOut = 0;
 	private double hiddenLayerDropOut = 0;
 
@@ -214,7 +215,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		this.batchNorm = useBatchNorm;
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase gradientNorm(GradientNormalization norm) {
 		if (norm == null)
 			config.gradientNormalization(GradientNormalization.None);
@@ -222,7 +223,7 @@ implements MLAlgorithm, Configurable, Closeable {
 			config.gradientNormalization(norm);
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase gradientNormalization(GradientNormalization norm) {
 		return gradientNorm(norm);
 	}
@@ -311,12 +312,12 @@ implements MLAlgorithm, Configurable, Closeable {
 		this.earlyStoppingTerminateAfter = nEpoch;
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase lossOutput(String path) {
 		this.scoresOutputFile = path;
 		return this;
 	}
-	
+
 	public DL4JMultiLayerBase lossScores(String path) {
 		return lossOutput(path);
 	}
@@ -342,7 +343,29 @@ implements MLAlgorithm, Configurable, Closeable {
 	 */
 
 	public DL4JMultiLayerBase weightDecay(double decay) {
-		config.weightDecay(decay);
+		// If no previous weightDecay was set and no new weightDecay - make no changes
+		if (decay <=0 && this.weightDecay <= 0)
+			return this;
+		this.weightDecay = Math.max(0, decay);
+		config.weightDecay(this.weightDecay);
+		return this;
+	}
+
+	public DL4JMultiLayerBase l1(double l1) {
+		// If no previous l1 was set and no new l1 - make no changes
+		if (l1 <=0 && this.l1 <= 0)
+			return this;
+		this.l1 = Math.max(0,l1); 
+		config.l1(this.l1);
+		return this;
+	}
+
+	public DL4JMultiLayerBase l2(double l2) {
+		// If no previous l2 was set and no new l2 - make no changes
+		if (l2 <=0 && this.l2 <= 0)
+			return this;
+		this.l2 = Math.max(0,l2);
+		config.l2(this.l2);
 		return this;
 	}
 
@@ -354,12 +377,9 @@ implements MLAlgorithm, Configurable, Closeable {
 	 * @return The calling instance
 	 */
 	public DL4JMultiLayerBase regularization(double weightDecay, double l1, double l2) {
-		if (l1>0)
-			config.l1(l1);
-		if (l2>0)
-			config.l2(l2);
-		// Disable (set to 0) if negative weight-decay is given
-		config.weightDecay(Math.max(0,weightDecay));
+		l1(l1);
+		l2(l2);
+		weightDecay(weightDecay);
 		return this;
 	}
 
@@ -393,18 +413,18 @@ implements MLAlgorithm, Configurable, Closeable {
 	 * 
 	 * ****************************************************************************
 	 */
-	
+
 	public int getInputWidth() {
 		return inputWidth;
 	}
-	
+
 	public Map<String, Object> getProperties() {
 		Map<String,Object> p = new HashMap<>();
 		// General CPSign stuff
 		p.put(PropertyFileSettings.ML_IMPL_NAME_KEY, getName());
 		p.put(PropertyFileSettings.ML_IMPL_KEY, getID());
 		p.put(PropertyFileSettings.ML_SEED_VALUE_KEY, seed);
-		
+
 		// Network structure
 		p.put(HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0), toCPSignConfigList(getHiddenLayerWidths()));
 		try {
@@ -416,7 +436,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		p.put(GRAD_NORM_CONF_NAMES.get(0), config.getGradientNormalization().name());
 		p.put(LOSS_FUNC_CONF_NAMES.get(0), loss.name());
 		p.put(ACTIVATION_CONF_NAMES.get(0), DL4JUtils.reverseLookup(config.getActivationFn()).toString()); 
-		
+
 		// Run configs
 		p.put(N_EPOCH_CONF_NAMES.get(0), numEpoch);
 		// only add if != null
@@ -428,17 +448,17 @@ implements MLAlgorithm, Configurable, Closeable {
 		p.put(EARLY_STOP_AFTER_CONF_NAMES.get(0), earlyStoppingTerminateAfter);
 		if (scoresOutputFile != null)
 			p.put(TRAIN_LOSS_FILE_PATH_CONF_NAMES.get(0), scoresOutputFile);
-		
+
 		// Regularization
-//		p.put(WEIGHT_DECAY_CONF_NAMES.get(0), config.); // TODO
-//		p.put(L2_CONF_NAMES.get(0), config.get); // TODO
-//		p.put(L1_CONF_NAMES.get(0), config.get); // TODO
-//		p.put(INPUT_DROP_OUT_CONF_NAMES.get(0), config.get); // TODO
-//		p.put(HIDDEN_DROP_OUT_CONF_NAMES.get(0), config.getHi); //TODO
-		
+		p.put(WEIGHT_DECAY_CONF_NAMES.get(0), weightDecay);
+		p.put(L2_CONF_NAMES.get(0), l2);
+		p.put(L1_CONF_NAMES.get(0), l1);
+		p.put(INPUT_DROP_OUT_CONF_NAMES.get(0), inputDropOut);
+		p.put(HIDDEN_DROP_OUT_CONF_NAMES.get(0), hiddenLayerDropOut);
+
 		return p;
 	}
-	
+
 	private static String toCPSignConfigList(List<?> list) {
 		if (list == null || list.isEmpty())
 			return "";
@@ -561,9 +581,9 @@ implements MLAlgorithm, Configurable, Closeable {
 				.addDescription("Specify a file or directory to print loss-scores from the training epochs to (in csv format), default is otherwise to print them in the logfile"));
 		// Regularization
 		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, 0)
-				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization"));
+				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization. Note that L2 and weightDecay cannot be used together."));
 		confs.add(new NumericConfigParameter(L2_CONF_NAMES, 0)
-				.addDescription("L2 regularization term. Disabled by default."));
+				.addDescription("L2 regularization term. Disabled by default. Note that L2 and weightDecay cannot be used together."));
 		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0)
 				.addDescription("L1 regularization term. Disabled by default."));
 		confs.add(new NumericConfigParameter(INPUT_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.))
@@ -582,9 +602,9 @@ implements MLAlgorithm, Configurable, Closeable {
 			String key = c.getKey();
 			// Network structure 
 			if (CollectionUtils.containsIgnoreCase(NET_WIDTH_CONF_NAMES, key)) {
-				networkWidth = TypeUtils.asInt(c.getValue());
+				networkWidth(TypeUtils.asInt(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(N_HIDDEN_CONF_NAMES, key)) {
-				numHiddenLayers = TypeUtils.asInt(c.getValue());
+				numHiddenLayers(TypeUtils.asInt(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(HIDDEN_LAYER_WIDTH_CONF_NAMES, key)) {
 				try {
 					List<Integer> tmp = new ArrayList<>();
@@ -643,7 +663,7 @@ implements MLAlgorithm, Configurable, Closeable {
 					throw new IllegalArgumentException("Invalid weightInit value: "+c.getValue());
 				}
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_NORM_CONF_NAMES, key)) {
-				batchNorm = TypeUtils.asBoolean(c.getValue());
+				batchNorm(TypeUtils.asBoolean(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(GRAD_NORM_CONF_NAMES, key)) {
 				if (c.getValue()==null) {
 					gradientNorm(null);
@@ -673,10 +693,10 @@ implements MLAlgorithm, Configurable, Closeable {
 			else if (CollectionUtils.containsIgnoreCase(N_EPOCH_CONF_NAMES, key)) {
 				numEpoch(TypeUtils.asInt(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(BATCH_SIZE_CONF_NAMES, key)) {
-				if (c.getValue() == null)
+				if (c.getValue() == null || "null".equals(c.getValue().toString()))
 					batchSize = null;
 				else
-					batchSize = TypeUtils.asInt(c.getValue());
+					batchSize(TypeUtils.asInt(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(TEST_FRAC_CONF_NAMES, key)) {
 				testSplitFraction(TypeUtils.asDouble(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(UPDATER_CONF_NAMES, key)) {
@@ -704,27 +724,18 @@ implements MLAlgorithm, Configurable, Closeable {
 				else 
 					throw new IllegalArgumentException("Invalid input type for parameter "+TRAIN_LOSS_FILE_PATH_CONF_NAMES.get(0));
 			}
-			
-			
+
+
 			// Regularization
 			else if (CollectionUtils.containsIgnoreCase(WEIGHT_DECAY_CONF_NAMES, key)) {
 				double decay = TypeUtils.asDouble(c.getValue());
-				if (decay <= 0)
-					config.weightDecay(0);
-				else 
-					config.weightDecay(decay);
+				weightDecay(decay);
 			} else if (CollectionUtils.containsIgnoreCase(L2_CONF_NAMES, key)) {
 				double l2 = TypeUtils.asDouble(c.getValue());
-				if (l2 <= 0)
-					config.l2(0);
-				else 
-					config.l2(l2);
+				l2(l2);
 			} else if (CollectionUtils.containsIgnoreCase(L1_CONF_NAMES, key)) {
 				double l1 = TypeUtils.asDouble(c.getValue());
-				if (l1 <= 0)
-					config.l1(0);
-				else 
-					config.l1(l1);
+				l1(l1);
 			} else if (CollectionUtils.containsIgnoreCase(INPUT_DROP_OUT_CONF_NAMES, key)) { 
 				inputDropOut(TypeUtils.asDouble(c.getValue()));
 			} else if (CollectionUtils.containsIgnoreCase(HIDDEN_DROP_OUT_CONF_NAMES, key)) {
@@ -839,7 +850,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		if (scoreOutput.length()>0) {
 			LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
 		}
-		
+
 		if (Double.isNaN(result.getBestModelScore())) {
 			LOGGER.debug("The best score was NaN - so the model should be bad - throwing an exception");
 			throw new IllegalArgumentException("The "+getName() + " model could not be fitted using the current parameters - please revise them");
