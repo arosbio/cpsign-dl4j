@@ -62,7 +62,7 @@ public class DL4JUtils {
 				lc = lc.substring(1, lc.length()-1);
 			}
 			lc += ' '; // Add a space in the end, so the splitting of UPDATER_SUB_PARAM_SPLITTER will not remove the last index
-			String name = lc.split(UPDATER_SUB_PARAM_SPLITTER)[0];
+			String name = lc.split(UPDATER_SUB_PARAM_SPLITTER)[0].trim();
 			List<Double> args = getArgs(lc);
 			// Cases for each implementation
 			if (SGD_NAME.equalsIgnoreCase(name)) {
@@ -141,14 +141,16 @@ public class DL4JUtils {
 				else 
 					throw new InvalidSyntax(N_ADAM_NAME, nAdamSyntax());
 			} else if (NESTEROVS_NAME.equalsIgnoreCase(name)) {
-				if (args.isEmpty())
+				if (args.isEmpty()) {
 					return new Nesterovs();
-				else if (args.size() <= 2)
+				}else if (args.size() <= 2)
 					return new Nesterovs(getOrDefault(args, 0, Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE), // LR
 							getOrDefault(args, 1, Nesterovs.DEFAULT_NESTEROV_MOMENTUM)); // Momentum
 				else 
 					throw new InvalidSyntax(NESTEROVS_NAME, nesterovsSyntax());
 			} else if (NO_OP_NAME.equalsIgnoreCase(name)) {
+				if (! args.isEmpty())
+					throw new IllegalArgumentException(String.format("Invalid syntax for updater %s, only accepted syntax is '%s', got: %s", NO_OP_NAME, NO_OP_NAME,input));
 				return new NoOp();
 			} else if (RMS_PROP_NAME.equalsIgnoreCase(name)) {
 				if (args.isEmpty())
@@ -166,6 +168,8 @@ public class DL4JUtils {
 			}
 		} catch (InvalidSyntax syntErr) {
 			throw new IllegalArgumentException(String.format("Invalid syntax for updater %s, expected syntax: %s",syntErr.algName,syntErr.expectedSyntax));
+		} catch(IllegalArgumentException e) {
+			throw e;
 		} catch (Exception e) {
 			throw new IllegalArgumentException("Invalid Updater: " + input);
 		}
