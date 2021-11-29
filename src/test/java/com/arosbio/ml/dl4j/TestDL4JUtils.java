@@ -1,5 +1,8 @@
 package com.arosbio.ml.dl4j;
 
+import java.util.Map;
+
+import org.apache.commons.collections4.map.HashedMap;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,6 +18,8 @@ import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.learning.config.NoOp;
 import org.nd4j.linalg.learning.config.RmsProp;
 import org.nd4j.linalg.learning.config.Sgd;
+
+import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
 
 public class TestDL4JUtils {
 
@@ -112,6 +117,15 @@ public class TestDL4JUtils {
 	@Test
 	public void testReverseWeightInit() {
 		Assert.assertTrue(DL4JUtils.reverseLookup(WeightInit.XAVIER.getWeightInitFunction()).equals(WeightInit.XAVIER));
+	}
+	
+	@Test
+	public void testToNiceStringLogging() {
+		Map<Object,Object> m = new HashedMap<>();
+		m.put("something", 3);
+		String str = EarlyStopScoreListener.toNiceString(m);
+//		System.err.println(str);
+		Assert.assertEquals("something=3", str);
 	}
 
 }

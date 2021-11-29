@@ -15,11 +15,14 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.arosbio.commons.Stopwatch;
+
 public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerNetwork>, Closeable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(EarlyStopScoreListener.class);
 	private static final String EPOCH_HEADER = "Epoch";
 	private static final String TRAIN_SCORE_HEADER = "Train score";
 	private static final String TEST_SCORE_HEADER = "Test score";
+	private static final String RUNTIME_MS_HEADER = "Runtime (ms)";
 	private static final char MISSING_VALUE = '-';
 
 
@@ -27,6 +30,7 @@ public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerN
 	private CSVPrinter printer;
 	private int epochInterval = 1;
 	private DataSetLossCalculator trainScorer, testScorer;
+	private Stopwatch watch = new Stopwatch();
 
 	public EarlyStopScoreListener(Appendable out, boolean scoresBasedOnTest) throws IOException {
 		printer = CSVFormat.DEFAULT.withCommentMarker('#').withAutoFlush(true).print(out);
@@ -36,9 +40,9 @@ public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerN
 	public EarlyStopScoreListener(Appendable out, boolean scoresBasedOnTest, Map<String,Object> params) throws IOException {
 		this(out,scoresBasedOnTest);
 		// Write the parameters first
-		printer.printComment(params.toString());
+		printer.printComment(toNiceString(params));
 	}
-
+	
 	public EarlyStopScoreListener interval(int interval) {
 		epochInterval = interval;
 		return this;
@@ -53,6 +57,11 @@ public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerN
 		this.trainScorer = scorer;
 		return this;
 	}
+	
+	public static String toNiceString(Map<?,?> map) {
+		String withBrackets = map.toString();
+		return withBrackets.substring(1, withBrackets.length()-1);
+	}
 
 
 	/**
@@ -63,10 +72,11 @@ public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerN
 	@Override
 	public void onStart(EarlyStoppingConfiguration<MultiLayerNetwork> esConfig, MultiLayerNetwork net) {
 		try {
-			printer.printRecord(EPOCH_HEADER,TRAIN_SCORE_HEADER,TEST_SCORE_HEADER);
+			printer.printRecord(EPOCH_HEADER,TRAIN_SCORE_HEADER,TEST_SCORE_HEADER,RUNTIME_MS_HEADER);
 		} catch (IOException e) {
 			LOGGER.debug("Failed writing header",e);
 		}
+		watch.start();
 	}
 
 	@Override
@@ -77,14 +87,18 @@ public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerN
 			return;
 
 		try {
+			watch.stop();
+			
 			printer.printRecord(
 					epochNum, // epoch
 					getTrainScore(score, net), // Train
-					getTestScore(score, net) // Test
+					getTestScore(score, net), // Test
+					watch.elapsedTimeMillis() // Runtime
 					);
 		} catch (Exception e) {
 			LOGGER.debug("Failed writing epoch score info",e);
 		}
+		watch.start();
 
 	}
 
