@@ -23,6 +23,10 @@
         <mf.impl.vendor>Aros Bio AB</mf.impl.vendor>
         <main.class>com.arosbio.ml.dl4j.MainClass</main.class>
         <!-- <main.class>com.arosbio.modeling.app.cli.CPSignApp</main.class>  Use this main class in case merging with main CPSign code -->
+        
+        <!-- Properties to supply at build time -->
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>dd-MM-yyyy HH:mm</maven.build.timestamp.format>
 	</properties>
 
 	<dependencies>
@@ -94,6 +98,13 @@
 
 
 	<build>
+		<resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
