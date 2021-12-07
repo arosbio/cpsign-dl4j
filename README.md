@@ -10,6 +10,8 @@ This repo contains an extension to [CPSign](https://arosbio.com), which adds the
   - [Running from CLI](#running-from-cli)
   - [Running from Java](#running-from-java)
 - [Performance notes](#performance-notes)
+  - [Backends](#backends)
+  - [Tweaking parallization](#tweaking-parallization)
 - [Change log](#change-log)
 - [TODOs](#todos)
 
@@ -59,6 +61,12 @@ Including this extension in a Java project would be as simple as to include the 
 
 ## Performance notes
 The two algorithms ([DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifier.java) and [DLRegressor](src/main/java/com/arosbio/ml/dl4j/DLRegressor.java)) have been set using the default values from the [Deeplearning4j trouble shooting guide](https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training). These implementations are fairly 'simple', and supports more configuration possibilities using the Java API (e.g. when it comes to strategies for the IUpdater where e.g. learning rate can be altered during training time). More complex networks will need to be implemented separately. At least these serves as a starting point.
+
+### Backends 
+Currently the `pom.xml` specifies the backend `nd4j-native-platform` which only supports running CPU and bundles in C/C++ backends for most common platforms (Andriod, Windows, Linux, Intel-based Mac). If you intend to run on a single platform or has the possibility to run on GPU this can be changed in order to reduce size of the final JAR and facilitate faster training/predictions (see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information). 
+
+### Tweaking parallization
+DL4J and ND4J tries to create as many threads as it think is optimal for using the available hardware, if you run other jobs on the same machine you may have to set the environment variables `OMP_NUM_THREADS` to not ceate too many threads which will be detrimental for performance instead, see further info at [Deeplearning4j performance issues](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends/performance-issues#step-13-check-omp_num_threads-performing-concurrent-inference-using-cpu-in-multiple-threads-simultan).
 
 ## Change log 
 
