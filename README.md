@@ -70,6 +70,14 @@ DL4J and ND4J tries to create as many threads as it think is optimal for using t
 
 ## Change log 
 
+**0.0.1-beta7**
+- Fix bug for `iterationTimeout`, missed copying over that parameter when calling `clone()` on the instances.
+
+**0.0.1-beta6**
+- Put version from pom file into `cpsign-dl4j.properties` file in the final jar, and the build timestamp as well.
+- Display the version and build timestamp when running the main class of the jar
+- add parameter `iterationTimeout` to set a different threshold in allowed minutes for each iteration to take before terminating training.
+
 **0.0.1-beta5**
 - Add build version and timestamp to cpsign-dl4j.properties file at build time and retreive it from the JAR main-class, allowing to get the version of a JAR file by simply running `java -jar cpsign-dl4.jar` from the CLI.
 - Allow to set a custom iteration timeout instead of the default 20 minutes.
