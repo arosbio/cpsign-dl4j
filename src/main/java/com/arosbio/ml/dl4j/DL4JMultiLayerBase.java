@@ -93,6 +93,7 @@ implements MLAlgorithm, Configurable, Closeable {
 	public static final double DEFAULT_TEST_SPLIT_FRAC = 0.1; 
 	public static final int DEFAULT_ES_N_EXTRA_EPOCH = 10;
 	public static final WeightInit DEFAULT_WEIGHT_INIT = WeightInit.XAVIER;
+	public static final int DEFAULT_ITER_TIMEOUT_MINS = 20;
 
 	//--- Settings - general
 	private long seed = CPSignSettings.getInstance().getRNGSeed();
@@ -110,7 +111,7 @@ implements MLAlgorithm, Configurable, Closeable {
 	private double testSplitFraction = DEFAULT_TEST_SPLIT_FRAC;
 	/** Determines for how many extra epochs to run - without improvement in loss score */
 	private int earlyStoppingTerminateAfter = 10;
-	private int iterationTimeoutMins = 20;
+	private int iterationTimeoutMins = DEFAULT_ITER_TIMEOUT_MINS;
 	/** A path that can be resolved as absolute, user-relative or relative */
 	private String scoresOutputFile;
 
@@ -586,7 +587,7 @@ implements MLAlgorithm, Configurable, Closeable {
 				.addDescription("The optmization algorithm, for furhter info refer to: https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm"));
 		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
 				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));
-		confs.add(new IntegerConfigParameter(ITERATION_TIMEOUT_CONF_NAMES, 20)
+		confs.add(new IntegerConfigParameter(ITERATION_TIMEOUT_CONF_NAMES, DEFAULT_ITER_TIMEOUT_MINS)
 				.addDescription("Specify a termination criterion for how long a single iteration (i.e. one batch passed through+backprop). Specified as the maximum number of minutes for a single interation."));
 		confs.add(new StringConfigParameter(TRAIN_LOSS_FILE_PATH_CONF_NAMES, null)
 				.addDescription("Specify a file or directory to print loss-scores from the training epochs to (in csv format), default is otherwise to print them in the logfile"));

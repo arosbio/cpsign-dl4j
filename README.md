@@ -62,8 +62,12 @@ The two algorithms ([DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifie
 
 ## Change log 
 
+**0.0.1-beta5**
+- Add build version and timestamp to cpsign-dl4j.properties file at build time and retreive it from the JAR main-class, allowing to get the version of a JAR file by simply running `java -jar cpsign-dl4.jar` from the CLI.
+- Allow to set a custom iteration timeout instead of the default 20 minutes.
+
 **0.0.1-beta4**
-- Changed syntax for `updater` to instaed use `;` so it will work both for specifying to the `--scorer` flag and to `--grid` options. Using `:` is problematic with `--scorer` as it is instead for the sub-sub-parameter and not the first order (i.e. an argument of DLClassifier or DLRegressor classes). This also requires CPSign main code of version 2.0.0-beta2 or greater. 
+- Changed syntax for `updater` to instead use `;` so it will work both for specifying to the `--scorer` flag and to `--grid` options. Using `:` is problematic with `--scorer` as it is instead for the sub-sub-parameter and not the first order (i.e. an argument of DLClassifier or DLRegressor classes). This also requires CPSign main code of version 2.0.0-beta2 or greater. 
 - Added better way to write training scores, these can now be printed to a user-specified file (`trainOutput`). Also computes the training loss scores in case an internal test-score is used for determining early stopping. 
 - Found issue regarding batch size, where re-using the same batch size for the internal test-set could be lead to no test batches being passed during evaluation in each epoch - giving a score of NaN and failed training. Now uses the same batch size in case at least 2 full batches can be sent, otherwise passes all test-examples at once. 
 - Added possibility for gradient normalization (`gradNorm`)
