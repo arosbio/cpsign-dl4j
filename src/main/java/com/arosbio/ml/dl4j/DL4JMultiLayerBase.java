@@ -455,6 +455,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		p.put(UPDATER_CONF_NAMES.get(0), DL4JUtils.toString(config.getIUpdater()));
 		p.put(OPT_CONF_NAMES.get(0), config.getOptimizationAlgo().toString());
 		p.put(EARLY_STOP_AFTER_CONF_NAMES.get(0), earlyStoppingTerminateAfter);
+		p.put(ITERATION_TIMEOUT_CONF_NAMES.get(0), iterationTimeoutMins);
 		if (scoresOutputFile != null)
 			p.put(TRAIN_LOSS_FILE_PATH_CONF_NAMES.get(0), scoresOutputFile);
 
@@ -777,6 +778,7 @@ implements MLAlgorithm, Configurable, Closeable {
 		cpy.batchSize = batchSize;
 		cpy.testSplitFraction = testSplitFraction;
 		cpy.earlyStoppingTerminateAfter = earlyStoppingTerminateAfter;
+		cpy.iterationTimeoutMins = iterationTimeoutMins;
 		cpy.scoresOutputFile = scoresOutputFile;
 
 		cpy.inputDropOut = inputDropOut;

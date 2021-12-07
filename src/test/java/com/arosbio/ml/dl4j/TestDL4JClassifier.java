@@ -450,6 +450,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		// Verify settings are the same
 		Assert.assertEquals(clf.getProperties(), clone.getProperties());
+		Assert.assertTrue(clf.getProperties().containsKey("iterTimeout"));
 		
 		
 		clf.close();

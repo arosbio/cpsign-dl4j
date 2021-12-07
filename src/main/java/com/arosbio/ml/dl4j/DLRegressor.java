@@ -1,7 +1,6 @@
 package com.arosbio.ml.dl4j;
 
 import java.util.List;
-import java.util.Map;
 
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
@@ -31,11 +30,6 @@ public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 		super(DEFAULT_LOSS_FUNC,config);
 	}
 	
-	@Override
-	public Map<String, Object> getProperties() {
-		return super.getProperties();
-	}
-
 	@Override
 	public String getDescription() {
 		return DESCRIPTION;

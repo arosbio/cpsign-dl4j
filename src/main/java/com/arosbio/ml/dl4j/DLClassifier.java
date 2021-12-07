@@ -44,11 +44,6 @@ public class DLClassifier extends DL4JMultiLayerBase
 	}
 	
 	@Override
-	public Map<String, Object> getProperties() {
-		return super.getProperties();
-	}
-
-	@Override
 	public String getDescription() {
 		return DESCRIPTION;
 	}
