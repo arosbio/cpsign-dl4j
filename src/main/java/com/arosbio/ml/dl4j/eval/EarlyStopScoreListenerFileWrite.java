@@ -1,17 +1,16 @@
 package com.arosbio.ml.dl4j.eval;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 
+import com.arosbio.io.UriUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.arosbio.io.UriUtils;
-
-public class EarlyStopScoreListenerFileWrite extends EarlyStopScoreListener implements Closeable {
+public class EarlyStopScoreListenerFileWrite extends EarlyStopScoreListener {
 	private static final Logger LOGGER = LoggerFactory.getLogger(EarlyStopScoreListenerFileWrite.class);
 	private static final String DEFAULT_FILE_NAME ="training_scores.csv";
 

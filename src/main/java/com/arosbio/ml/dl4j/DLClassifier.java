@@ -5,6 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.arosbio.ml.nd4j.ND4JUtil;
+import com.arosbio.modeling.data.DataRecord;
+import com.arosbio.modeling.data.DataUtils;
+import com.arosbio.modeling.data.FeatureVector;
+import com.arosbio.modeling.ml.algorithms.MultiLabelClassifier;
+import com.arosbio.modeling.ml.algorithms.PseudoProbabilisticClassifier;
+
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
@@ -14,16 +21,8 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.arosbio.ml.nd4j.ND4JUtil;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.DataUtils;
-import com.arosbio.modeling.data.FeatureVector;
-import com.arosbio.modeling.ml.algorithms.MultiLabelClassifier;
-import com.arosbio.modeling.ml.algorithms.PseudoProbabilisticClassifier;
-import com.arosbio.modeling.ml.algorithms.ScoringClassifier;
-
 public class DLClassifier extends DL4JMultiLayerBase 
-	implements ScoringClassifier, MultiLabelClassifier, PseudoProbabilisticClassifier {
+	implements MultiLabelClassifier, PseudoProbabilisticClassifier {
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DLClassifier.class);
@@ -129,7 +128,6 @@ public class DLClassifier extends DL4JMultiLayerBase
 		super.copyParametersToNew(clone);
 		return clone;
 	}
-
 	
 	
 }

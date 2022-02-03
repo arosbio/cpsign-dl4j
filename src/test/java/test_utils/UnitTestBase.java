@@ -79,8 +79,9 @@ public class UnitTestBase {
 			Assert.fail("No license found");
 		}
 		return new File(wd,files[0]);
+		
 	}
-	
+
 	public static Dataset.SubSet getIrisClassificationData() throws IOException {
 		try (InputStream is = UnitTestBase.class.getResourceAsStream(IRIS_REL_PATH)){
 			return Dataset.fromLIBSVMFormat(is).getDataset();

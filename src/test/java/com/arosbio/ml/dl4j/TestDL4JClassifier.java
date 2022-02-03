@@ -12,6 +12,36 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.arosbio.chem.io.in.SDFile;
+import com.arosbio.commons.FuzzyServiceLoader;
+import com.arosbio.commons.logging.LoggerUtils;
+import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
+import com.arosbio.modeling.CPSignSettings;
+import com.arosbio.modeling.app.cli.CPSignApp;
+import com.arosbio.modeling.app.cli.ExplainArgument;
+import com.arosbio.modeling.app.cli.Train;
+import com.arosbio.modeling.app.cli.TuneScorer;
+import com.arosbio.modeling.cheminf.ChemDataset;
+import com.arosbio.modeling.cheminf.NamedLabels;
+import com.arosbio.modeling.cheminf.descriptors.DescriptorFactory;
+import com.arosbio.modeling.cheminf.descriptors.fp.ECFP4;
+import com.arosbio.modeling.data.DataRecord;
+import com.arosbio.modeling.data.Dataset.SubSet;
+import com.arosbio.modeling.data.transform.scale.RobustScaler;
+import com.arosbio.modeling.data.transform.scale.Standardizer;
+import com.arosbio.modeling.io.ModelInfo;
+import com.arosbio.modeling.io.ModelSerializer;
+import com.arosbio.modeling.io.PrecomputedDataClassification;
+import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
+import com.arosbio.modeling.ml.cp.acp.ACPClassifier;
+import com.arosbio.modeling.ml.cp.nonconf.classification.InverseProbabilityNCM;
+import com.arosbio.modeling.ml.ds_splitting.RandomSampling;
+import com.arosbio.modeling.ml.metrics.Metric;
+import com.arosbio.modeling.ml.metrics.classification.BalancedAccuracy;
+import com.arosbio.modeling.ml.metrics.classification.ClassifierAccuracy;
+import com.arosbio.modeling.ml.testing.RandomSplit;
+import com.arosbio.modeling.ml.testing.TestRunner;
+
 import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
@@ -31,36 +61,6 @@ import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.learning.config.IUpdater;
 import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
-
-import com.arosbio.chem.io.in.SDFile;
-import com.arosbio.commons.FuzzyServiceLoader;
-import com.arosbio.commons.logging.LoggerUtils;
-import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
-import com.arosbio.modeling.CPSignSettings;
-import com.arosbio.modeling.app.cli.CPSignApp;
-import com.arosbio.modeling.app.cli.ExplainArgument;
-import com.arosbio.modeling.app.cli.Train;
-import com.arosbio.modeling.app.cli.TuneScorer;
-import com.arosbio.modeling.cheminf.ChemDataset;
-import com.arosbio.modeling.cheminf.NamedLabels;
-import com.arosbio.modeling.cheminf.descriptors.DescriptorFactory;
-import com.arosbio.modeling.cheminf.descriptors.fp.ECFP4;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.Dataset.SubSet;
-import com.arosbio.modeling.data.transform.scale.RobustScaler;
-import com.arosbio.modeling.data.transform.scale.Standardizer;
-import com.arosbio.modeling.io.ModelCreator;
-import com.arosbio.modeling.io.ModelInfo;
-import com.arosbio.modeling.io.PrecomputedDataClassification;
-import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
-import com.arosbio.modeling.ml.cp.acp.ACPClassifier;
-import com.arosbio.modeling.ml.cp.nonconf.classification.InverseProbabilityNCM;
-import com.arosbio.modeling.ml.ds_splitting.RandomSampling;
-import com.arosbio.modeling.ml.metrics.Metric;
-import com.arosbio.modeling.ml.metrics.classification.BalancedAccuracy;
-import com.arosbio.modeling.ml.metrics.classification.ClassifierAccuracy;
-import com.arosbio.modeling.ml.testing.RandomSplit;
-import com.arosbio.modeling.ml.testing.TestRunner;
 
 import test_utils.UnitTestBase;
 
@@ -126,8 +126,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 		Assert.assertEquals(ba.getScore(), ba2.getScore(), 0.000001);
 		Assert.assertEquals(ca.getScore(), ca2.getScore(), 0.000001);
 		
-		clf.close();
-		loaded.close();
+		clf.releaseResources();
+		loaded.releaseResources();
 		
 	}
 	
@@ -162,8 +162,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		clf2.train(allData);
 		
-		clf.close();
-		clf2.close();
+		clf.releaseResources();
+		clf2.releaseResources();
 		
 //		String scores = IOUtils.toString(tmpScoresFile.toURI(), StandardCharsets.UTF_8);
 //		System.err.println(scores);
@@ -194,7 +194,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		System.err.println("test label: "+testRec.getLabel());
 		System.err.println("Scores: "+ clf.predictScores(allData.get(0).getFeatures()));
-		clf.close();
+		clf.releaseResources();
 	}
 	
 //	@Test
@@ -333,7 +333,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		Assert.assertEquals(.05,((Adam)up).getLearningRate(),0.0001);
 		
 		
-		clf.close();
+		clf.releaseResources();
 	}
 	
 	@Test
@@ -353,7 +353,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		allData = new Standardizer().fitAndTransform(allData);
 		
 		clf.train(allData);
-		clf.close();
+		clf.releaseResources();
 	}
 	
 	/*
@@ -406,7 +406,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		ds.initializeDescriptors();
 		ds.setTextualLabels(new NamedLabels("setosa", "versicolor", "virginica"));
 		File dataFile = File.createTempFile("data", ".zip");
-		ModelCreator.generatePrecomputedModel(new PrecomputedDataClassification(ds, new ModelInfo("iris")), dataFile, null);
+		ModelSerializer.saveDataset(new PrecomputedDataClassification(ds, new ModelInfo("iris")), dataFile, null);
 		
 		CPSignApp.main(new String[] {TuneScorer.CMD_NAME, 
 			"--data-set",dataFile.toString(),
@@ -453,8 +453,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 		Assert.assertTrue(clf.getProperties().containsKey("iterTimeout"));
 		
 		
-		clf.close();
-		clone.close();
+		clf.releaseResources();
+		clone.releaseResources();
 	}
 
 }

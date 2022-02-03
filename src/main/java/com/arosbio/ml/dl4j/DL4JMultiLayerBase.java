@@ -1,6 +1,5 @@
 package com.arosbio.ml.dl4j;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +11,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import com.arosbio.commons.CollectionUtils;
+import com.arosbio.commons.TypeUtils;
+import com.arosbio.commons.config.BooleanConfigParameter;
+import com.arosbio.commons.config.EnumConfigParameter;
+import com.arosbio.commons.config.IntegerConfigParameter;
+import com.arosbio.commons.config.NumericConfigParameter;
+import com.arosbio.commons.config.StringConfigParameter;
+import com.arosbio.commons.config.StringListConfigParameter;
+import com.arosbio.commons.mixins.ResourceAllocator;
+import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
+import com.arosbio.ml.dl4j.eval.EarlyStopScoreListenerFileWrite;
+import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
+import com.arosbio.modeling.CPSignSettings;
+import com.arosbio.modeling.app.cli.params.converters.IntegerListOrRangeConverter;
+import com.arosbio.modeling.app.cli.utils.MultiArgumentSplitter;
+import com.arosbio.modeling.data.DataRecord;
+import com.arosbio.modeling.io.PropertyFileSettings;
+import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
+import com.google.common.collect.Range;
+import com.google.common.io.Files;
 
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
 import org.deeplearning4j.earlystopping.EarlyStoppingConfiguration;
@@ -47,32 +67,11 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.slf4j.LoggerFactory;
 
-import com.arosbio.commons.CollectionUtils;
-import com.arosbio.commons.TypeUtils;
-import com.arosbio.commons.config.BooleanConfigParameter;
-import com.arosbio.commons.config.Configurable;
-import com.arosbio.commons.config.EnumConfigParameter;
-import com.arosbio.commons.config.IntegerConfigParameter;
-import com.arosbio.commons.config.NumericConfigParameter;
-import com.arosbio.commons.config.StringConfigParameter;
-import com.arosbio.commons.config.StringListConfigParameter;
-import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
-import com.arosbio.ml.dl4j.eval.EarlyStopScoreListenerFileWrite;
-import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
-import com.arosbio.modeling.CPSignSettings;
-import com.arosbio.modeling.app.cli.params.converters.IntegerListOrRangeConverter;
-import com.arosbio.modeling.app.cli.utils.MultiArgumentSplitter;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.io.PropertyFileSettings;
-import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
-import com.google.common.collect.Range;
-import com.google.common.io.Files;
-
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 
 public abstract class DL4JMultiLayerBase 
-implements MLAlgorithm, Configurable, Closeable {
+	implements MLAlgorithm, ResourceAllocator {
 
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
@@ -922,12 +921,18 @@ implements MLAlgorithm, Configurable, Closeable {
 		return previousW;
 	}
 
-	/**
-	 * Closes the underlying network and frees all resources
-	 */
-	public void close() {
-		if (model != null)
+	@Override
+	public boolean holdsResources() {
+		return model != null;
+	}
+
+	@Override
+	public boolean releaseResources() {
+		if (model!=null){
 			model.close();
+			return true;
+		}
+		return false;
 	}
 
 	public String toString() {
