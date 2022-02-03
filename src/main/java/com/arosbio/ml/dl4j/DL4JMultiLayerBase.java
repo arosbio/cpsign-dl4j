@@ -929,8 +929,12 @@ public abstract class DL4JMultiLayerBase
 	@Override
 	public boolean releaseResources() {
 		if (model!=null){
-			model.close();
-			return true;
+			try {
+				model.close();
+				return true;
+			} catch (Exception | Error e){
+				LOGGER.debug("Failed releasing memory allocation from network",e);
+			}
 		}
 		return false;
 	}
