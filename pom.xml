@@ -1,11 +1,9 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.arosbio</groupId>
 	<artifactId>cpsign-dl4j</artifactId>
-	<version>0.0.1-beta7-gpu</version> <!--  -->
+	<version>0.0.1-beta8</version> <!--  -->
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -13,32 +11,32 @@
 		<dl4j.version>1.0.0-M1.1</dl4j.version>
 		<java.version>1.8</java.version>
 		<surefire.version>3.0.0-M5</surefire.version>
-		
+
 		<jcommon.version>1.0.23</jcommon.version>
-        <jfreechart.version>1.0.13</jfreechart.version>
-        
-        <shade.version>3.2.4</shade.version>
-        
-        <!-- Properties for the Manifest -->
-        <mf.impl.vendor>Aros Bio AB</mf.impl.vendor>
-        <main.class>com.arosbio.ml.dl4j.MainClass</main.class>
-        <!-- <main.class>com.arosbio.modeling.app.cli.CPSignApp</main.class>  Use this main class in case merging with main CPSign code -->
-        
-        <!-- Properties to supply at build time -->
-        <timestamp>${maven.build.timestamp}</timestamp>
-        <maven.build.timestamp.format>dd-MM-yyyy HH:mm</maven.build.timestamp.format>
+		<jfreechart.version>1.0.13</jfreechart.version>
+
+		<shade.version>3.2.4</shade.version>
+
+		<!-- Properties for the Manifest -->
+		<mf.impl.vendor>Aros Bio AB</mf.impl.vendor>
+		<main.class>com.arosbio.ml.dl4j.MainClass</main.class>
+		<!-- <main.class>com.arosbio.modeling.app.cli.CPSignApp</main.class>  Use this main class in case merging with main CPSign code -->
+
+		<!-- Properties to supply at build time -->
+		<timestamp>${maven.build.timestamp}</timestamp>
+		<maven.build.timestamp.format>dd-MM-yyyy HH:mm</maven.build.timestamp.format>
 	</properties>
 
 	<dependencies>
-		
-		
+
+
 		<dependency>
 			<groupId>com.arosbio</groupId>
 			<artifactId>cpsign</artifactId>
 			<version>${cpsign.version}</version>
 			<scope>provided</scope> <!-- Remove if merging with main CPSign code -->
 		</dependency>
-		
+
 		<!-- deeplearning4j-core: contains main functionality and neural networks -->
 		<dependency>
 			<groupId>org.deeplearning4j</groupId>
@@ -54,14 +52,14 @@
         - nd4j-cuda-<version>
         More info: https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends
         -->
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-cuda-11.2</artifactId> <!--<artifactId>nd4j-native-platform</artifactId>-->
-            <version>${dl4j.version}</version>
-        </dependency>
-        
-        <!-- For plotting -->
-        <!-- 
+		<dependency>
+			<groupId>org.nd4j</groupId>
+			<artifactId>nd4j-native-platform</artifactId> <!--<artifactId>nd4j-cuda-11.2</artifactId>-->
+			<version>${dl4j.version}</version>
+		</dependency>
+
+		<!-- For plotting -->
+		<!-- 
         <dependency>
             <groupId>jfree</groupId>
             <artifactId>jfreechart</artifactId>
@@ -73,8 +71,8 @@
             <version>${jcommon.version}</version>
         </dependency>
          -->
-        
-        <!-- TEST DEPENDENCIES -->
+
+		<!-- TEST DEPENDENCIES -->
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -92,19 +90,26 @@
 			<artifactId>system-rules</artifactId>
 			<version>1.19.0</version>
 			<scope>test</scope>
+			<!-- junit:junit-dep is deprecated, and junit:junit replaces it. -->
+			<exclusions>
+				<exclusion>
+					<groupId>junit</groupId>
+					<artifactId>junit-dep</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
-        
+
 	</dependencies>
 
 
 	<build>
 		<resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
-        
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -114,73 +119,69 @@
 					<target>${java.version}</target>
 				</configuration>
 			</plugin>
-			
-			<plugin>
-          		<artifactId>maven-surefire-plugin</artifactId>
-          		<version>${surefire.version}</version>
-			</plugin>
-			
-			 <plugin>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>${shade.version}</version>
-                <configuration>
-                    <shadedArtifactAttached>true</shadedArtifactAttached>
-                    <shadedClassifierName>bin</shadedClassifierName>
-                    <createDependencyReducedPom>true</createDependencyReducedPom>
-                    <finalName>cpsign-dl4j</finalName>
-                    <filters>
-                        <filter>
-                            <artifact>*:*</artifact>
-                            <excludes>
-                                <exclude>org/datanucleus/**</exclude>
-                                <exclude>META-INF/*.SF</exclude>
-                                <exclude>META-INF/*.DSA</exclude>
-                                <exclude>META-INF/*.RSA</exclude>
-                            </excludes>
-                        </filter>
-                    </filters>
-                </configuration>
 
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                        	<!-- If you remove the artifactSet below you will include the main CPSign code and build an Uber-jar including all required code for running 
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${surefire.version}</version>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>${shade.version}</version>
+				<configuration>
+					<shadedArtifactAttached>true</shadedArtifactAttached>
+					<shadedClassifierName>bin</shadedClassifierName>
+					<createDependencyReducedPom>true</createDependencyReducedPom>
+					<finalName>cpsign-dl4j</finalName>
+					<filters>
+						<filter>
+							<artifact>*:*</artifact>
+							<excludes>
+								<exclude>org/datanucleus/**</exclude>
+								<exclude>META-INF/*.SF</exclude>
+								<exclude>META-INF/*.DSA</exclude>
+								<exclude>META-INF/*.RSA</exclude>
+							</excludes>
+						</filter>
+					</filters>
+				</configuration>
+
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<!-- If you remove the artifactSet below you will include the main CPSign code and build an Uber-jar including all required code for running 
                         	everything from a single JAR-->
-                        	<artifactSet>
-                				<excludes>com.arosbio:cpsign</excludes>
-                			</artifactSet>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                                    <resource>reference.conf</resource>
-                                </transformer>
-                                <transformer
-									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+							<artifactSet>
+								<excludes>com.arosbio:cpsign</excludes>
+							</artifactSet>
+							<transformers>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>reference.conf</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
 										<Main-Class>${main.class}</Main-Class>
 
 										<Implementation-Title>Aros Bio ${project.artifactId}</Implementation-Title>
 										<Implementation-Version>${project.version}</Implementation-Version>
 										<Implementation-Vendor-Id>${mf.impl.vendor}</Implementation-Vendor-Id>
-										<X-Build-timestamp>${maven.build.timestamp}</X-Build-timestamp> 
+										<X-Build-timestamp>${maven.build.timestamp}</X-Build-timestamp>
 									</manifestEntries>
 								</transformer>
-                            	<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer" />
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
-                            </transformers>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            
-            
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer" />
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
 		</plugins>
 	</build>
 
