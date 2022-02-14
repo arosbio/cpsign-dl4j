@@ -41,6 +41,7 @@ import com.arosbio.modeling.ml.metrics.classification.BalancedAccuracy;
 import com.arosbio.modeling.ml.metrics.classification.ClassifierAccuracy;
 import com.arosbio.modeling.ml.testing.RandomSplit;
 import com.arosbio.modeling.ml.testing.TestRunner;
+import com.google.common.collect.ImmutableList;
 
 import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -433,7 +434,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 	}
 	
 	@Test
-	public void testClonePredictor() {
+	public void testClonePredictor() throws InterruptedException {
+		long seed = 56789;
 		DLClassifier clf = new DLClassifier();
 		clf.numEpoch(200) //1000
 			.testSplitFraction(0)
@@ -442,11 +444,17 @@ public class TestDL4JClassifier extends UnitTestBase {
 			.updater(new Sgd(0.1))
 			.lossOutput("some_path/file.csv")
 			.networkWidth(42)
-			.activation(Activation.TANH);
-		
+			.activation(Activation.TANH)
+			.setSeed(seed);;
+		System.err.println(clf.getProperties());
+		Thread.sleep(1000l);
+
 		DLClassifier clone = clf.clone();
+		System.err.println(clone.getProperties());
 		
 //		System.err.println(clf.getProperties());
+		Assert.assertEquals(seed, clf.getSeed());
+		Assert.assertEquals(seed, clone.getSeed());
 		
 		// Verify settings are the same
 		Assert.assertEquals(clf.getProperties(), clone.getProperties());
@@ -455,6 +463,58 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		clf.releaseResources();
 		clone.releaseResources();
+	}
+
+	@Test
+	public void testSeedPickedupFromCLI(){
+		
+	}
+
+	// @Rule
+	// public final EnvironmentVariables env = new EnvironmentVariables();
+
+	@Test
+	public void testRepeatableResultsSameSeed()throws Exception{
+		long seed = 56789;
+		double s1 = trainAndEval(seed);
+
+		// env.set("OMP_NUM_THREADS", "1");
+		double s2 = trainAndEval(seed);
+
+		// env.set("OMP_NUM_THREADS", "5");
+		double s3 = trainAndEval(seed);
+
+		// env.set("OMP_NUM_THREADS", "10");
+		double s4 = trainAndEval(seed);
+
+		// System.err.printf("%s  %s  %s  %s%n",s1,s2,s3,s4);
+
+		Assert.assertEquals(s1, s2,0.000001);
+		Assert.assertEquals(s1, s3,0.000001);
+		Assert.assertEquals(s1, s4,0.000001);
+	}
+
+
+	private double trainAndEval(long seed)throws Exception{
+		// System.err.println(System.getenv("OMP_NUM_THREADS"));
+		CPSignSettings.getInstance().setRNGSeed(seed);
+		// Predictor
+		DLClassifier clf = new DLClassifier().clone(); 
+		clf.nEpoch(1000).testSplitFraction(0d);
+		System.err.println(clf.getProperties());
+		ACPClassifier acp = new ACPClassifier(new InverseProbabilityNCM(clf), new RandomSampling(1, .2));
+		
+		// Data
+		ChemDataset ds = new ChemDataset(new ECFP4());
+		ds.initializeDescriptors();
+		ds.add(new SDFile(TestDL4JClassifier.class.getResource(AmesBinaryClf.AMES_REL_PATH).toURI()).getIterator(),AmesBinaryClf.PROPERTY,AmesBinaryClf.LABELS);
+//		System.err.println("max index: " + (DataUtils.getMaxFeatureIndex(ds.getDataset())+1));
+//		System.err.println(ds);
+		RandomSplit splitter = new RandomSplit();
+		splitter.setRNGSeed(seed);
+		TestRunner tester = new TestRunner(splitter);
+		List<Metric> mets = tester.evaluate(ds, acp, ImmutableList.of(new BalancedAccuracy()));
+		return ((BalancedAccuracy)mets.get(0)).getScore();
 	}
 
 }
