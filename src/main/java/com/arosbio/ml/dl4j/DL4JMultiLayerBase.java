@@ -94,9 +94,6 @@ public abstract class DL4JMultiLayerBase
 	public static final WeightInit DEFAULT_WEIGHT_INIT = WeightInit.XAVIER;
 	public static final int DEFAULT_ITER_TIMEOUT_MINS = 20;
 
-	//--- Settings - general
-	private long seed = CPSignSettings.getInstance().getRNGSeed();
-
 	//--- Settings - network structure
 	/** The width of the hidden layers in the network - all will have the same width */
 	private int networkWidth = DEFAULT_NETWORK_WIDTH;
@@ -143,13 +140,17 @@ public abstract class DL4JMultiLayerBase
 	 */
 	public DL4JMultiLayerBase(LossFunction lossFunc) {
 		this.loss = lossFunc;
+		LOGGER.debug("Init of network, cpsign-seed: {}",CPSignSettings.getInstance().getRNGSeed());
+
 		config = new NeuralNetConfiguration.Builder()
 				.activation(Activation.RELU)
 				.weightInit(DEFAULT_WEIGHT_INIT)
-				.updater(new Nesterovs());
+				.updater(new Nesterovs())
+				.seed(CPSignSettings.getInstance().getRNGSeed());
 	}
 
 	public DL4JMultiLayerBase(LossFunction lossFunc, NeuralNetConfiguration.Builder config) {
+		LOGGER.debug("Init of network, using pre-defined config");
 		this.loss = lossFunc;
 		this.config = config;
 	}
@@ -431,7 +432,7 @@ public abstract class DL4JMultiLayerBase
 		// General CPSign stuff
 		p.put(PropertyFileSettings.ML_IMPL_NAME_KEY, getName());
 		p.put(PropertyFileSettings.ML_IMPL_KEY, getID());
-		p.put(PropertyFileSettings.ML_SEED_VALUE_KEY, seed);
+		p.put(PropertyFileSettings.ML_SEED_VALUE_KEY, config.getSeed());
 
 		// Network structure
 		p.put(HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0), toCPSignConfigList(getHiddenLayerWidths()));
@@ -481,11 +482,11 @@ public abstract class DL4JMultiLayerBase
 	}
 
 	public void setSeed(long seed) {
-		this.seed = seed;
+		this.config.seed(seed);
 	}
 
 	public long getSeed() {
-		return this.seed;
+		return config.getSeed();
 	}
 
 	@Override
@@ -725,7 +726,7 @@ public abstract class DL4JMultiLayerBase
 				try {
 					optimizer(OptimizationAlgorithm.valueOf(c.getValue().toString()));
 				} catch (Exception e) {
-					LOGGER.debug("Tried to set optimization algorithm using input:" +c.getValue());
+					LOGGER.debug("Tried to set optimization algorithm using input: {}",c.getValue());
 					throw new IllegalArgumentException("Invalid Optimization algorithm: "+c.getValue());
 				}
 			} else if (CollectionUtils.containsIgnoreCase(EARLY_STOP_AFTER_CONF_NAMES, key)) {
@@ -755,7 +756,7 @@ public abstract class DL4JMultiLayerBase
 			} else if (CollectionUtils.containsIgnoreCase(HIDDEN_DROP_OUT_CONF_NAMES, key)) {
 				dropOut(TypeUtils.asDouble(c.getValue()));
 			}  else {
-				LOGGER.debug("Unused Config-argument: " + c);
+				LOGGER.debug("Unused Config-argument: {}", c);
 			}
 		}
 	}
@@ -766,7 +767,6 @@ public abstract class DL4JMultiLayerBase
 	protected void copyParametersToNew(DL4JMultiLayerBase cpy) {
 		cpy.config = config.clone();
 
-		cpy.seed = seed;
 		cpy.networkWidth = networkWidth;
 		cpy.numHiddenLayers = numHiddenLayers;
 		if (explicitLayerWidths != null)
@@ -788,6 +788,7 @@ public abstract class DL4JMultiLayerBase
 
 		cpy.dType = dType;
 		cpy.saveUpdater = saveUpdater;
+		LOGGER.debug("Copied over settings to new network-clone: {}",getProperties());
 	}
 
 	protected Pair<List<DataRecord>,List<DataRecord>> getInternalTrainTestSplits(List<DataRecord> allRecs){

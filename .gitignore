@@ -36,3 +36,9 @@ libs/
 
 # test output dir
 test_out/
+
+# CLI based tests
+src/test/cli_based/tmp
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
