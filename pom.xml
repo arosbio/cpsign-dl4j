@@ -3,7 +3,7 @@
 
 	<groupId>com.arosbio</groupId>
 	<artifactId>cpsign-dl4j</artifactId>
-	<version>0.0.1-beta8</version> <!--  -->
+	<version>0.0.1-beta9</version> <!--  -->
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
