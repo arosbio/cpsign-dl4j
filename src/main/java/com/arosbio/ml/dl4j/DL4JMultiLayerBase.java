@@ -280,7 +280,7 @@ public abstract class DL4JMultiLayerBase
 
 	public DL4JMultiLayerBase testSplitFraction(double testFrac) {
 		if (testFrac <0 || testFrac >0.5) {
-			LOGGER.debug("Invalid test fraction: " + testFrac);
+			LOGGER.debug("Invalid test fraction: {}", testFrac);
 			throw new IllegalArgumentException("Invalid test split fraction: " + testFrac);
 		}
 		this.testSplitFraction = testFrac;
@@ -521,7 +521,7 @@ public abstract class DL4JMultiLayerBase
 		LOGGER.debug("Attempting to load {} model", getName());
 		model = ModelSerializer.restoreMultiLayerNetwork(istream);
 		inputWidth = model.getLayer(0).getParam("W").rows();
-		LOGGER.debug("Finished loading DL4J model with properties: " + model.summary());
+		LOGGER.debug("Finished loading DL4J model with properties: {}", model.summary());
 	}
 
 	// Structure of the network

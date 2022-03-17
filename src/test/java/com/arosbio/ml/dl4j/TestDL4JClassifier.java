@@ -8,9 +8,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.arosbio.chem.io.in.SDFile;
 import com.arosbio.commons.FuzzyServiceLoader;
@@ -25,7 +27,9 @@ import com.arosbio.modeling.cheminf.ChemDataset;
 import com.arosbio.modeling.cheminf.NamedLabels;
 import com.arosbio.modeling.cheminf.descriptors.DescriptorFactory;
 import com.arosbio.modeling.cheminf.descriptors.fp.ECFP4;
+import com.arosbio.modeling.commons.ClassificationUtils;
 import com.arosbio.modeling.data.DataRecord;
+import com.arosbio.modeling.data.Dataset;
 import com.arosbio.modeling.data.Dataset.SubSet;
 import com.arosbio.modeling.data.transform.scale.RobustScaler;
 import com.arosbio.modeling.data.transform.scale.Standardizer;
@@ -42,6 +46,7 @@ import com.arosbio.modeling.ml.metrics.classification.ClassifierAccuracy;
 import com.arosbio.modeling.ml.testing.RandomSplit;
 import com.arosbio.modeling.ml.testing.TestRunner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -69,7 +74,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 
 	@Test
 	public void testTrainSaveAndLoad() throws IllegalArgumentException, IOException {
-		
+		CPSignSettings.getInstance().setRNGSeed(56789);
 		DLClassifier clf = new DLClassifier();
 		clf.numEpoch(200) //1000
 			.testSplitFraction(0)
@@ -80,6 +85,15 @@ public class TestDL4JClassifier extends UnitTestBase {
 			.activation(Activation.TANH);
 		
 		SubSet allData = getIrisClassificationData();
+
+		// Create "custom" labels -1, 1, 2 to make sure we serialize/load labels correctly
+		for (DataRecord r : allData){
+			if (r.getLabel() == 0){
+				r.setLabel(-1);
+			}
+		}
+
+
 		SubSet[] dataSplits = allData.splitRandom(.7);
 		SubSet trainingData = dataSplits[0];
 		SubSet testData = dataSplits[1];
@@ -88,21 +102,37 @@ public class TestDL4JClassifier extends UnitTestBase {
 		Standardizer std = new Standardizer();
 		trainingData = std.fitAndTransform(trainingData);
 		testData = std.transform(testData);
+
+		// Find the order of the labels..
+		Set<Integer> labelsSet = new HashSet<>();
+		for (DataRecord r : trainingData){
+			if (! labelsSet.contains((int)r.getLabel())){
+				// System.err.println("New label: " + r.getLabel());
+				labelsSet.add((int)r.getLabel());
+			}
+		}
 		
 		// Train it
 		clf.train(trainingData);
 
+		// System.err.println("Labels after training: " + clf.getLabels());
+
 		// Evaluate the first one
 		BalancedAccuracy ba = new BalancedAccuracy();
 		ClassifierAccuracy ca = new ClassifierAccuracy();
+		Assert.assertEquals(new HashSet<>(clf.getLabels()), labelsSet);
+		// System.err.println("trained labels: " + clf.getLabels());
 		
-		
+		Set<Integer> predictedClasses = new HashSet<>();
 		for (DataRecord r : testData) {
 			int pred = clf.predictClass(r.getFeatures());
+			predictedClasses.add(pred);
 			ba.addPrediction((int)r.getLabel(),pred);
 			ca.addPrediction((int)r.getLabel(),pred);
 		}
-		
+		// System.err.printf("BA: %s Acc: %s%n",ba.getScore(),ca.getScore());
+		Assert.assertEquals(labelsSet, predictedClasses);
+		// System.err.println("Predicted classes: " + predictedClasses);
 		// Save the model
 		File modelFile = File.createTempFile("model", ".net"); 
 		try (OutputStream ostream = new FileOutputStream(modelFile)){
@@ -114,15 +144,19 @@ public class TestDL4JClassifier extends UnitTestBase {
 		try (InputStream istream = new FileInputStream(modelFile);){
 			loaded.loadFromStream(istream);
 		}
+		Assert.assertEquals(clf.getLabels(), loaded.getLabels());
 		
 		BalancedAccuracy ba2 = new BalancedAccuracy();
 		ClassifierAccuracy ca2 = new ClassifierAccuracy();
-		
+		predictedClasses.clear();
 		for (DataRecord r : testData) {
 			int pred = loaded.predictClass(r.getFeatures());
+			predictedClasses.add(pred);
 			ba2.addPrediction((int)r.getLabel(),pred);
 			ca2.addPrediction((int)r.getLabel(),pred);
 		}
+		Assert.assertEquals(labelsSet, predictedClasses);
+		// System.err.println("Predicted classes (loaded): " + predictedClasses);
 		// Check that the loaded model produces the same results
 		Assert.assertEquals(ba.getScore(), ba2.getScore(), 0.000001);
 		Assert.assertEquals(ca.getScore(), ca2.getScore(), 0.000001);
@@ -130,6 +164,112 @@ public class TestDL4JClassifier extends UnitTestBase {
 		clf.releaseResources();
 		loaded.releaseResources();
 		
+	}
+
+
+	// @Test
+	public void testNumBytes() throws Exception {
+		// Simple check to see appropriate number of bytes to mark in the loading of labels
+		System.err.println(""+ "[12,12,125,21,24,12,521,125,51,215,152]".getBytes("UTF-8").length);
+	}
+
+	@Test
+	public void testSaveLoadCPSignModel() throws Exception {
+		CPSignSettings.getInstance().setRNGSeed(56789);
+		DLClassifier clf = new DLClassifier();
+		clf.numEpoch(200) //1000
+			.testSplitFraction(0)
+			.numHiddenLayers(3)
+			.batchSize(-1)
+			.updater(new Sgd(0.1))
+			.gradientNorm(GradientNormalization.ClipL2PerLayer)
+			.activation(Activation.TANH);
+		
+		SubSet allData = getBinaryClassificationData(); //getIrisClassificationData();
+		// Set custom labels [-1, 1]
+		Set<Double> labels = new HashSet<>();
+		for (DataRecord r : allData){
+			if (r.getLabel() == 0){
+				r.setLabel(-1);
+			}
+			labels.add(r.getLabel());
+		}
+		Assert.assertEquals(ImmutableSet.of(-1d,1d), labels);
+
+		SubSet[] dataSplits = allData.splitRandom(.7);
+		SubSet trainingData = dataSplits[0];
+		SubSet testData = dataSplits[1];
+
+		
+		// Standardize training data and transform test-data as well
+		Standardizer std = new Standardizer();
+		// allData = std.fitAndTransform(allData);
+		trainingData = std.fitAndTransform(trainingData);
+		testData = std.transform(testData);
+
+		// Create ACP implementation
+		ACPClassifier acp = new ACPClassifier(new InverseProbabilityNCM(new DLClassifier()),new RandomSampling());
+
+		// Create ChemPredictor
+		
+		
+		// Wrap SubSet in Dataset
+		Dataset data = new Dataset();
+		data.setDataset(trainingData);
+
+		// Train ACP
+		acp.train(data);
+		// System.err.println("ACP props: " + acp.getProperties());
+
+		// Evaluate the first one
+		BalancedAccuracy ba = new BalancedAccuracy();
+		ClassifierAccuracy ca = new ClassifierAccuracy();
+		Set<Integer> predictedClasses = new HashSet<>();
+		
+		for (DataRecord r : testData) {
+			Map<Integer,Double> pvals = acp.predict(r.getFeatures());
+			int predClass = ClassificationUtils.getPredictedClass(pvals);
+			predictedClasses.add(predClass);
+			// int pred = clf.predictClass(r.getFeatures());
+			ba.addPrediction((int)r.getLabel(),predClass);
+			ca.addPrediction((int)r.getLabel(),predClass);
+		}
+		Assert.assertEquals(ImmutableSet.of(-1,1), predictedClasses);
+
+		// System.err.printf("BA: %s Acc: %s%n",ba.getScore(),ca.getScore());
+		
+		// Save the model
+		File modelFile = File.createTempFile("model", ".net"); 
+		ModelSerializer.saveModel(acp, new ModelInfo("name"), modelFile, null); //predictor, jar, spec);
+
+
+		// LoggerUtils.setDebugMode(System.err);
+		// Load the model again
+		ACPClassifier loaded = (ACPClassifier) ModelSerializer.loadPredictor(modelFile.toURI(), null);
+
+		// System.err.println("loaded properties: " + loaded.getProperties());
+		
+		
+		BalancedAccuracy ba2 = new BalancedAccuracy();
+		ClassifierAccuracy ca2 = new ClassifierAccuracy();
+		predictedClasses.clear();
+		for (DataRecord r : testData) {
+			Map<Integer,Double> pvals = loaded.predict(r.getFeatures());
+			int pred = ClassificationUtils.getPredictedClass(pvals);
+			predictedClasses.add(pred);
+			// int pred = loaded.predictClass(r.getFeatures());
+			ba2.addPrediction((int)r.getLabel(),pred);
+			ca2.addPrediction((int)r.getLabel(),pred);
+		}
+		Assert.assertEquals(ImmutableSet.of(-1,1), predictedClasses);
+		// System.err.printf("BA: %s Acc: %s%n",ba2.getScore(),ca2.getScore());
+
+		// Check that the loaded model produces the same results
+		Assert.assertEquals(ba.getScore(), ba2.getScore(), 0.000001);
+		Assert.assertEquals(ca.getScore(), ca2.getScore(), 0.000001);
+		
+		acp.releaseResources();
+		loaded.releaseResources();
 	}
 	
 	@Test
