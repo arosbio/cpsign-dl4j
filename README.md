@@ -20,7 +20,7 @@ This repo contains an extension to [CPSign](https://arosbio.com), which adds the
 This project uses Maven as build tool. CPSign comes as a uber/fat-jar including all required dependencies. The building process is thus slightly different than the standard maven build where transitive dependencies can be compared between the explicit dependencies. This could cause issues with different versions of required depencies being packaged in the final jar. If there are issues that can be traced back to this, we will also start making a 'thin CPSign' with accompanied pom-file so that the package and dependencies can follow the standard maven build flow.
 
 ### Step 1: Install CPSign to your local maven repo
-Using the [maven install](https://maven.apache.org/plugins/maven-install-plugin/index.html) plugin with the goal `install:install-file` CPSign can be installed to your local maven cached repository. For convenience we've included the bash script [install_cpsign.sh](install_cpsign.sh) that does this for you, assuming that you have cpsign in the directory `libs` located in the project root directory. You may change this to suit your needs, e.g. following updated versions of CPSign. 
+Using the [maven install](https://maven.apache.org/plugins/maven-install-plugin/index.html) plugin with the goal `install:install-file` CPSign can be installed to your local maven cached repository. For convenience we've included the bash script [install_cpsign.sh](install_cpsign.sh) that does this for you, assuming that you have cpsign in the directory `libs` located in the project root directory. You may change this to suit your needs, e.g. following updated versions of CPSign.
 
 ### Run unit-tests
 To verify that everything is working as it should, run unit tests using the standard:
@@ -69,6 +69,13 @@ Currently the `pom.xml` specifies the backend `nd4j-native-platform` which only 
 DL4J and ND4J tries to create as many threads as it think is optimal for using the available hardware, if you run other jobs on the same machine you may have to set the environment variables `OMP_NUM_THREADS` to not ceate too many threads which will be detrimental for performance instead, see further info at [Deeplearning4j performance issues](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends/performance-issues#step-13-check-omp_num_threads-performing-concurrent-inference-using-cpu-in-multiple-threads-simultan).
 
 ## Change log 
+
+**0.0.1-beta9**
+- Save labels from DLClassifier if needed, e.g. custom labels that are not 0,1,2,.. This means that old models will be loaded successfully given that they have default labels, and will give strange predictions if they were something else. Added a gihub issue to DL4J repo that `labels` are not serialized, hopefully this can be solved upstream.
+- Solved bug in `predictClass` of `DLClassifier` so that it works for non-standard labels, e.g. having [-1, 1] will now give correct output.
+
+**0.0.1-beta8**
+- Minor updates, e.g. remove duplicate `seed` and use the one already in `NeuralNetConfiguration.Builder` class. Add try-catch for releasing resources etc.
 
 **0.0.1-beta7**
 - Fix bug for `iterationTimeout`, missed copying over that parameter when calling `clone()` on the instances.
