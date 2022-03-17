@@ -73,6 +73,93 @@ import test_utils.UnitTestBase;
 public class TestDL4JClassifier extends UnitTestBase {
 
 	@Test
+	public void testTrainSaveAndLoad_StandardLabels() throws IllegalArgumentException, IOException {
+		CPSignSettings.getInstance().setRNGSeed(56789);
+		DLClassifier clf = new DLClassifier();
+		clf.numEpoch(200) //1000
+			.testSplitFraction(0)
+			.numHiddenLayers(3)
+			.batchSize(-1)
+			.updater(new Sgd(0.1))
+			.gradientNorm(GradientNormalization.ClipL2PerLayer)
+			.activation(Activation.TANH);
+		
+		SubSet allData = getIrisClassificationData();
+
+		SubSet[] dataSplits = allData.splitRandom(.7);
+		SubSet trainingData = dataSplits[0];
+		SubSet testData = dataSplits[1];
+		
+		// Standardize training data and transform test-data as well
+		Standardizer std = new Standardizer();
+		trainingData = std.fitAndTransform(trainingData);
+		testData = std.transform(testData);
+
+		// Find the order of the labels..
+		Set<Integer> labelsSet = new HashSet<>();
+		for (DataRecord r : trainingData){
+			if (! labelsSet.contains((int)r.getLabel())){
+				labelsSet.add((int)r.getLabel());
+			}
+		}
+		// Verify that labels are the standard ones
+		Assert.assertEquals(ImmutableSet.of(0,1,2), labelsSet);
+		
+		// Train it
+		clf.train(trainingData);
+
+		// System.err.println("Labels after training: " + clf.getLabels());
+
+		// Evaluate the first one
+		BalancedAccuracy ba = new BalancedAccuracy();
+		ClassifierAccuracy ca = new ClassifierAccuracy();
+		Assert.assertEquals(new HashSet<>(clf.getLabels()), labelsSet);
+		// System.err.println("trained labels: " + clf.getLabels());
+		
+		Set<Integer> predictedClasses = new HashSet<>();
+		for (DataRecord r : testData) {
+			int pred = clf.predictClass(r.getFeatures());
+			predictedClasses.add(pred);
+			ba.addPrediction((int)r.getLabel(),pred);
+			ca.addPrediction((int)r.getLabel(),pred);
+		}
+		// System.err.printf("BA: %s Acc: %s%n",ba.getScore(),ca.getScore());
+		Assert.assertEquals(labelsSet, predictedClasses);
+		// System.err.println("Predicted classes: " + predictedClasses);
+		// Save the model
+		File modelFile = File.createTempFile("model", ".net"); 
+		try (OutputStream ostream = new FileOutputStream(modelFile)){
+			clf.saveToStream(ostream);
+		}
+		
+		// Load it from file
+		DLClassifier loaded = new DLClassifier();
+		try (InputStream istream = new FileInputStream(modelFile);){
+			loaded.loadFromStream(istream);
+		}
+		Assert.assertEquals(clf.getLabels(), loaded.getLabels());
+		
+		BalancedAccuracy ba2 = new BalancedAccuracy();
+		ClassifierAccuracy ca2 = new ClassifierAccuracy();
+		predictedClasses.clear();
+		for (DataRecord r : testData) {
+			int pred = loaded.predictClass(r.getFeatures());
+			predictedClasses.add(pred);
+			ba2.addPrediction((int)r.getLabel(),pred);
+			ca2.addPrediction((int)r.getLabel(),pred);
+		}
+		Assert.assertEquals(labelsSet, predictedClasses);
+		// System.err.println("Predicted classes (loaded): " + predictedClasses);
+		// Check that the loaded model produces the same results
+		Assert.assertEquals(ba.getScore(), ba2.getScore(), 0.000001);
+		Assert.assertEquals(ca.getScore(), ca2.getScore(), 0.000001);
+		
+		clf.releaseResources();
+		loaded.releaseResources();
+		
+	}
+
+	@Test
 	public void testTrainSaveAndLoad() throws IllegalArgumentException, IOException {
 		CPSignSettings.getInstance().setRNGSeed(56789);
 		DLClassifier clf = new DLClassifier();

@@ -31,8 +31,8 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DLClassifier extends DL4JMultiLayerBase 
-	implements MultiLabelClassifier, PseudoProbabilisticClassifier {
+public class DLClassifier extends DL4JMultiLayerBase
+		implements MultiLabelClassifier, PseudoProbabilisticClassifier {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DLClassifier.class);
 
@@ -48,9 +48,9 @@ public class DLClassifier extends DL4JMultiLayerBase
 	}
 
 	public DLClassifier(NeuralNetConfiguration.Builder config) {
-		super(DEFAULT_LOSS_FUNC,config);
+		super(DEFAULT_LOSS_FUNC, config);
 	}
-	
+
 	@Override
 	public String getDescription() {
 		return DESCRIPTION;
@@ -68,9 +68,9 @@ public class DLClassifier extends DL4JMultiLayerBase
 
 	@Override
 	public List<Integer> getLabels() {
-		if (this.labels != null){
+		if (this.labels != null) {
 			List<Integer> lst = new ArrayList<>(labels.length);
-			for (int l : labels){
+			for (int l : labels) {
 				lst.add(l);
 			}
 			return lst;
@@ -85,71 +85,105 @@ public class DLClassifier extends DL4JMultiLayerBase
 
 	@Override
 	public void saveToStream(OutputStream ostream) throws IOException, IllegalStateException {
-		if (model==null)
+		if (model == null)
 			throw new IllegalStateException("Model not trained yet");
-		LOGGER.debug("Saving labels {} from {} model to stream",Arrays.toString(labels),NAME);
 
-		try (
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(ostream,CHARSET));
-			){
+		// Check if labels are non-standard (and need to be saved)
+		boolean needSaving = false;
+		for (int i = 0; i < labels.length; i++) {
+			if (labels[i] != i) {
+				needSaving = true;
+				break;
+			}
+		}
+		if (needSaving) {
+			LOGGER.debug("Saving labels {} from {} model to stream", Arrays.toString(labels), NAME);
+
+			try (
+					BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(ostream, CHARSET));) {
 				writer.write(LABELS_LINE_START);
-			writer.write(Arrays.toString(labels));
-			writer.write(END_OF_CUSTOM_ADDITION);
-			writer.flush();
-			
-			// continue to save in base-class, which saves the full model
+				writer.write(Arrays.toString(labels));
+				writer.write(END_OF_CUSTOM_ADDITION);
+				writer.flush();
+
+				// continue to save in base-class, which saves the full model
+				super.saveToStream(ostream);
+			}
+		} else {
+			LOGGER.debug("Model have standard labels, not required to be saved");
 			super.saveToStream(ostream);
 		}
-		
+
 	}
 
 	@Override
 	public void loadFromStream(InputStream istream) throws IOException {
-		LOGGER.debug("Loading labels from input in ml model {}",NAME);
+		LOGGER.debug("Loading labels from input in ml model {}", NAME);
 		try (
-			BufferedInputStream buff = new BufferedInputStream(istream);
-			){
+				BufferedInputStream buff = new BufferedInputStream(istream);) {
+
+			// Mark the stream - to check if custom labels have been added to the
+			// serialization
+			buff.mark(150);
 
 			byte[] checkStart = new byte[LABELS_LINE_START.getBytes(CHARSET).length];
 			buff.read(checkStart);
-			String txt = new String(checkStart,CHARSET);
-			if (! txt.equals(LABELS_LINE_START)){
-				throw new IOException("Invalid serialization of "+NAME + " model");
-			}
-			// Here we should have read the inital part only, and stand at the start of the [...] list
-			
-			int numBytesToTest = 50;
-			buff.mark(numBytesToTest);
-			// Read until END_OF_CUSTOM_ADDITION is found
-			byte[] toRead = new byte[numBytesToTest];
-			buff.read(toRead);
-			String readTxt = new String(toRead,CHARSET);
-			String[] listTxt = readTxt.split(END_OF_CUSTOM_ADDITION);
-			if (listTxt.length<2){
-				// Failed finding labels!
-				LOGGER.error("Could not find labels from serialized model, read '{}'",readTxt);
-				throw new IOException("fail 1");
-			}
+			String txt = new String(checkStart, CHARSET);
+			if (txt.equals(LABELS_LINE_START)) {
+				// have have added the custom labels to the serialized format
 
-			// Convert to labels
-			String labelsTxt = listTxt[0].substring(1,listTxt[0].length()-1); // Skip the "[]" stuff
-			LOGGER.debug("parsed out this as the list of labels: {}",labelsTxt);
-			String[] labelsSplits = labelsTxt.split(",");
-			labels = new int[labelsSplits.length];
-			for (int i=0; i<labelsSplits.length; i++){
-				labels[i] = Integer.parseInt(labelsSplits[i].trim());
+				// Here we should have read the inital part only, and stand at the start of the
+				// [...] list
+
+				int numBytesToTest = 50;
+				buff.mark(numBytesToTest);
+				// Read until END_OF_CUSTOM_ADDITION is found
+				byte[] toRead = new byte[numBytesToTest];
+				buff.read(toRead);
+				String readTxt = new String(toRead, CHARSET);
+				String[] listTxt = readTxt.split(END_OF_CUSTOM_ADDITION);
+				if (listTxt.length < 2) {
+					// Failed finding labels!
+					LOGGER.error("Could not find labels from serialized model, read '{}'", readTxt);
+					throw new IOException("fail 1");
+				}
+
+				// Convert to labels
+				String labelsTxt = listTxt[0].substring(1, listTxt[0].length() - 1); // Skip the "[]" stuff
+				LOGGER.debug("parsed out this as the list of labels: {}", labelsTxt);
+				String[] labelsSplits = labelsTxt.split(",");
+				labels = new int[labelsSplits.length];
+				for (int i = 0; i < labelsSplits.length; i++) {
+					labels[i] = Integer.parseInt(labelsSplits[i].trim());
+				}
+				LOGGER.debug("Loaded labels {} from stream", Arrays.asList(labels));
+
+				// Here we need to reset to correct location in the stream
+				buff.reset(); // here we're after the first thing (LABELS_LINE_START)
+				// Calculate how many bytes to skip before DL4j model starts
+				int nBytes = (listTxt[0] + END_OF_CUSTOM_ADDITION).getBytes(CHARSET).length;
+				buff.skip(nBytes);
+				buff.mark(-1); // Invalidate the mark
+
+				// Continue to load from Dl4j
+				super.loadFromStream(buff);
+
+			} else {
+				// Here we haven't added custom labels to the serialized format - reset and read
+				// fully from
+				// ModelSerializer method of dl4j
+				buff.reset();
+				super.loadFromStream(buff);
+
+				// This means that we have no labels at this point and have to create the
+				// default one instead
+				// Labels are always ordered and cpsign give them 0,1,2,... by default
+				labels = new int[model.getOutputLayer().getParam("b").columns()];
+				for (int l = 0; l < labels.length; l++) {
+					labels[l] = l;
+				}
+
 			}
-			LOGGER.debug("Loaded labels {} from stream",Arrays.asList(labels));
-
-			// Here we need to reset to correct location in the stream
-			buff.reset(); // here we're after the first thing (LABELS_LINE_START)
-			// Calculate how many bytes to skip before DL4j model starts
-			int nBytes = (listTxt[0]+END_OF_CUSTOM_ADDITION).getBytes(CHARSET).length;
-			buff.skip(nBytes); 
-			buff.mark(-1); // Invalidate the mark
-
-			// Continue to load from Dl4j
-			super.loadFromStream(buff);
 
 		}
 
@@ -157,35 +191,34 @@ public class DLClassifier extends DL4JMultiLayerBase
 
 	@Override
 	public int predictClass(FeatureVector vector) throws IllegalStateException {
-		if (model==null)
+		if (model == null)
 			throw new IllegalStateException("Model not trained yet");
 		return labels[model.predict(ND4JUtil.toArray(vector, getInputWidth()))[0]];
 	}
-	
+
 	@Override
-	public Map<Integer, Double> predictScores(FeatureVector vector) 
+	public Map<Integer, Double> predictScores(FeatureVector vector)
 			throws IllegalStateException {
-		if (model==null)
+		if (model == null)
 			throw new IllegalStateException("Model not trained yet");
 		INDArray pred = model.output(ND4JUtil.toArray(vector, getInputWidth()));
-		
-		Map<Integer,Double> predMapping = new HashMap<>();
-		for (int i=0; i<labels.length; i++) {
-			predMapping.put(labels[i], pred.getDouble(0,i));
+
+		Map<Integer, Double> predMapping = new HashMap<>();
+		for (int i = 0; i < labels.length; i++) {
+			predMapping.put(labels[i], pred.getDouble(0, i));
 		}
 		return predMapping;
 	}
-	
+
 	@Override
 	public Map<Integer, Double> predictProbabilities(FeatureVector vector) throws IllegalStateException {
 		return predictScores(vector);
 	}
-	
 
 	@Override
 	public void train(List<DataRecord> trainingset) throws IllegalArgumentException {
-		
-		int nInput = DataUtils.getMaxFeatureIndex(trainingset)+1;
+
+		int nInput = DataUtils.getMaxFeatureIndex(trainingset) + 1;
 		int numClasses = DataUtils.countLabels(trainingset).size();
 
 		// Create the list builder and add the input layer
@@ -193,28 +226,26 @@ public class DLClassifier extends DL4JMultiLayerBase
 
 		// Add hidden layers
 		int lastW = addHiddenLayers(listBldr, nInput);
-		
+
 		// Add output layer
-		listBldr.layer( new OutputLayer.Builder(loss) 
+		listBldr.layer(new OutputLayer.Builder(loss)
 				.activation(Activation.SOFTMAX)
 				.nIn(lastW).nOut(numClasses)
 				.dropOut(1) // no drop out for the output layer
-				.build()
-				);
+				.build());
 
 		trainNetwork(listBldr.build(), trainingset, true);
 
 		// Set labels
 		labels = model.getLabels().toIntVector();
-		
+
 	}
-	
+
 	@Override
 	public DLClassifier clone() {
 		DLClassifier clone = new DLClassifier(null);
 		super.copyParametersToNew(clone);
 		return clone;
 	}
-	
-	
+
 }
