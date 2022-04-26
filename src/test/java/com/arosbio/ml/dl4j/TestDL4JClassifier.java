@@ -594,8 +594,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 		
 		CPSignSettings.getInstance().setRNGSeed(1637217339288l);
 		// Predictor
-		DLClassifier clf = new DLClassifier(); 
-		clf.nEpoch(1000).testSplitFraction(0d);
+		DLClassifier clf = new DLClassifier();
+		clf.nEpoch(1000).inputDropOut(.3).testSplitFraction(0d); // .batchNorm(true)
 		ACPClassifier acp = new ACPClassifier(new InverseProbabilityNCM(clf), new RandomSampling(1, .2));
 		
 		// Data

@@ -943,8 +943,14 @@ public abstract class DL4JMultiLayerBase
 		inputWidth = numIn;
 
 		// If input drop out should be applied
-		if (inputDropOut>0)
+		if (inputDropOut>0){
+			if (batchNorm){
+				LOGGER.error("Was configured to use both input dropout and batch normalization - this does not work with DL4J and is not");
+				throw new IllegalStateException("Input dropout and batch normalization is not allowed at the same time");
+			}
 			bldr.layer(new DropoutLayer(1-inputDropOut));
+		}
+			
 
 		int previousW = numIn;
 		// Hidden layers
