@@ -119,7 +119,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 		RobustScaler std = new RobustScaler();
 		data = std.fitAndTransform(data);
 		
-		TestRunner runner = new TestRunner(new RandomSplit(.2));
+		TestRunner runner = new TestRunner.Builder(new RandomSplit(.2)).build();
 		Dataset ds = new Dataset();
 		ds.setDataset(data);
 		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());
@@ -139,7 +139,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 		RobustScaler std = new RobustScaler();
 		data = std.fitAndTransform(data);
 		
-		TestRunner runner = new TestRunner(new RandomSplit(.2));
+		TestRunner runner = new TestRunner.Builder(new RandomSplit(.2)).build();
 		Dataset ds = new Dataset();
 		ds.setDataset(data);
 		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());

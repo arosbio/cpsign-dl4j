@@ -326,8 +326,9 @@ public class TestDL4JClassifier extends UnitTestBase {
 		// System.err.printf("BA: %s Acc: %s%n",ba.getScore(),ca.getScore());
 		
 		// Save the model
-		File modelFile = File.createTempFile("model", ".net"); 
-		ModelSerializer.saveModel(acp, new ModelInfo("name"), modelFile, null); //predictor, jar, spec);
+		File modelFile = File.createTempFile("model", ".net");
+		acp.setModelInfo( new ModelInfo("name"));
+		ModelSerializer.saveModel(acp, modelFile, null); //predictor, jar, spec);
 
 
 		// LoggerUtils.setDebugMode(System.err);
@@ -604,7 +605,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 //		System.err.println("max index: " + (DataUtils.getMaxFeatureIndex(ds.getDataset())+1));
 //		System.err.println(ds);
 		
-		TestRunner tester = new TestRunner(new RandomSplit());
+		TestRunner tester = new TestRunner.Builder(new RandomSplit()).build();
 		List<Metric> mets = tester.evaluate(ds, acp);
 		Assert.assertFalse(mets.isEmpty());
 //		System.err.println(mets);
@@ -739,7 +740,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 //		System.err.println(ds);
 		RandomSplit splitter = new RandomSplit();
 		splitter.setRNGSeed(seed);
-		TestRunner tester = new TestRunner(splitter);
+		TestRunner tester = new TestRunner.Builder(splitter).build();
 		List<Metric> mets = tester.evaluate(ds, acp, ImmutableList.of(new BalancedAccuracy()));
 		return ((BalancedAccuracy)mets.get(0)).getScore();
 	}

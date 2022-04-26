@@ -14,12 +14,12 @@ import java.util.concurrent.TimeUnit;
 
 import com.arosbio.commons.CollectionUtils;
 import com.arosbio.commons.TypeUtils;
-import com.arosbio.commons.config.BooleanConfigParameter;
-import com.arosbio.commons.config.EnumConfigParameter;
-import com.arosbio.commons.config.IntegerConfigParameter;
-import com.arosbio.commons.config.NumericConfigParameter;
-import com.arosbio.commons.config.StringConfigParameter;
-import com.arosbio.commons.config.StringListConfigParameter;
+import com.arosbio.commons.config.BooleanConfig;
+import com.arosbio.commons.config.EnumConfig;
+import com.arosbio.commons.config.IntegerConfig;
+import com.arosbio.commons.config.NumericConfig;
+import com.arosbio.commons.config.StringConfig;
+import com.arosbio.commons.config.StringListConfig;
 import com.arosbio.commons.mixins.ResourceAllocator;
 import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
 import com.arosbio.ml.dl4j.eval.EarlyStopScoreListenerFileWrite;
@@ -28,11 +28,10 @@ import com.arosbio.modeling.CPSignSettings;
 import com.arosbio.modeling.app.cli.params.converters.IntegerListOrRangeConverter;
 import com.arosbio.modeling.app.cli.utils.MultiArgumentSplitter;
 import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.io.PropertyFileSettings;
 import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
 import com.google.common.collect.Range;
-import com.google.common.io.Files;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
 import org.deeplearning4j.earlystopping.EarlyStoppingConfiguration;
 import org.deeplearning4j.earlystopping.EarlyStoppingModelSaver;
@@ -55,7 +54,6 @@ import org.deeplearning4j.nn.conf.layers.DropoutLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.util.ModelSerializer;
-import org.javatuples.Pair;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.activations.IActivation;
 import org.nd4j.linalg.api.buffer.DataType;
@@ -430,9 +428,9 @@ public abstract class DL4JMultiLayerBase
 	public Map<String, Object> getProperties() {
 		Map<String,Object> p = new HashMap<>();
 		// General CPSign stuff
-		p.put(PropertyFileSettings.ML_IMPL_NAME_KEY, getName());
-		p.put(PropertyFileSettings.ML_IMPL_KEY, getID());
-		p.put(PropertyFileSettings.ML_SEED_VALUE_KEY, config.getSeed());
+		p.put(MLAlgorithm.ML_NAME_PARAM_KEY, getName());
+		p.put(MLAlgorithm.ML_ID_PARAM_KEY, getID());
+		p.put("seedValue", config.getSeed());
 
 		// Network structure
 		p.put(HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0), toCPSignConfigList(getHiddenLayerWidths()));
@@ -556,54 +554,73 @@ public abstract class DL4JMultiLayerBase
 	public List<ConfigParameter> getConfigParameters() {
 		List<ConfigParameter> confs = new ArrayList<>();
 		// Network structure
-		confs.add(new IntegerConfigParameter(NET_WIDTH_CONF_NAMES, DEFAULT_NETWORK_WIDTH)
-				.addDescription("The width of each hidden layer, the input and output-layers are defined by the required input and output"));
-		confs.add(new IntegerConfigParameter(N_HIDDEN_CONF_NAMES, DEFAULT_NUM_HIDDEN_LAYERS)
-				.addDescription("Number of hidden layers"));
-		confs.add(new StringListConfigParameter(HIDDEN_LAYER_WIDTH_CONF_NAMES, null)
-				.addDescription(String.format("Set custom layer widths for each layer, setting this will ignore the parameters %s and %s",NET_WIDTH_CONF_NAMES.get(0),N_HIDDEN_CONF_NAMES.get(0))));
-		confs.add(new EnumConfigParameter<>(WEIGHT_INIT_CONF_NAMES, EnumSet.allOf(WeightInit.class),DEFAULT_WEIGHT_INIT)
-				.addDescription("Weight initialization function/distribution. See Deeplearning4j guides for further details."));
-		confs.add(new BooleanConfigParameter(BATCH_NORM_CONF_NAMES, false, Arrays.asList(true,false))
-				.addDescription("Add batch normalization between all the dense layers"));
-		confs.add(new EnumConfigParameter<>(GRAD_NORM_CONF_NAMES, EnumSet.allOf(GradientNormalization.class), GradientNormalization.None)
-				.addDescription("Add gradient normalization, applied to all layers"));
-		confs.add(new EnumConfigParameter<>(LOSS_FUNC_CONF_NAMES, EnumSet.allOf(LossFunction.class),loss)
-				.addDescription("The loss function of the network"));
-		confs.add(new EnumConfigParameter<>(ACTIVATION_CONF_NAMES, EnumSet.allOf(Activation.class),Activation.RELU)
-				.addDescription("The activation function for the hidden layers"));
+		confs.add(new IntegerConfig.Builder(NET_WIDTH_CONF_NAMES,DEFAULT_NETWORK_WIDTH)
+				.description("The width of each hidden layer, the input and output-layers are defined by the required input and output")
+				.build());
+		confs.add(new IntegerConfig.Builder(N_HIDDEN_CONF_NAMES, DEFAULT_NUM_HIDDEN_LAYERS)
+				.description("Number of hidden layers")
+				.build());
+		confs.add(new StringListConfig.Builder(HIDDEN_LAYER_WIDTH_CONF_NAMES, null)
+				.description(String.format("Set custom layer widths for each layer, setting this will ignore the parameters %s and %s",NET_WIDTH_CONF_NAMES.get(0),N_HIDDEN_CONF_NAMES.get(0)))
+				.build());
+		confs.add(new EnumConfig.Builder<>(WEIGHT_INIT_CONF_NAMES, EnumSet.allOf(WeightInit.class),DEFAULT_WEIGHT_INIT)
+				.description("Weight initialization function/distribution. See Deeplearning4j guides for further details.").build());
+		confs.add(new BooleanConfig.Builder(BATCH_NORM_CONF_NAMES, false).defaultGrid(Arrays.asList(true,false))
+				.description("Add batch normalization between all the dense layers")
+				.build());
+		confs.add(new EnumConfig.Builder<>(GRAD_NORM_CONF_NAMES, EnumSet.allOf(GradientNormalization.class), GradientNormalization.None)
+				.description("Add gradient normalization, applied to all layers")
+				.build());
+		confs.add(new EnumConfig.Builder<>(LOSS_FUNC_CONF_NAMES, EnumSet.allOf(LossFunction.class),loss)
+				.description("The loss function of the network")
+				.build());
+		confs.add(new EnumConfig.Builder<>(ACTIVATION_CONF_NAMES, EnumSet.allOf(Activation.class),Activation.RELU)
+				.description("The activation function for the hidden layers")
+				.build());
 		// Running config
-		confs.add(new IntegerConfigParameter(N_EPOCH_CONF_NAMES, DEFAULT_N_EPOCH)
-				.addDescription("The (maximum) number of epochs to run. Final number could be less depending on if the loss score stops to decrese and the "+EARLY_STOP_AFTER_CONF_NAMES.get(0)+" is not set to a very large number."));
-		confs.add(new IntegerConfigParameter(BATCH_SIZE_CONF_NAMES, null)
-				.addDescription("The mini-batch size, will control how many records are passed in each iteration. The default is to use 10 mini-batches for each epoch "
-						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch)."));
-		confs.add(new NumericConfigParameter(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC, Range.closed(0., .5))
-				.addDescription("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead."));
-		confs.add(new StringConfigParameter(UPDATER_CONF_NAMES, "Nesterovs;"+Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE+";"+Nesterovs.DEFAULT_NESTEROV_MOMENTUM)
-				.addDescription("Set the updater (https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm). "
+		confs.add(new IntegerConfig.Builder(N_EPOCH_CONF_NAMES, DEFAULT_N_EPOCH)
+				.description("The (maximum) number of epochs to run. Final number could be less depending on if the loss score stops to decrese and the "+EARLY_STOP_AFTER_CONF_NAMES.get(0)+" is not set to a very large number.")
+				.build());
+		confs.add(new IntegerConfig.Builder(BATCH_SIZE_CONF_NAMES, null)
+				.description("The mini-batch size, will control how many records are passed in each iteration. The default is to use 10 mini-batches for each epoch "
+						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch).")
+						.build());
+		confs.add(new NumericConfig.Builder(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC).range(Range.closed(0., .5))
+				.description("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead.")
+				.build());
+		confs.add(new StringConfig.Builder(UPDATER_CONF_NAMES, "Nesterovs;"+Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE+";"+Nesterovs.DEFAULT_NESTEROV_MOMENTUM)
+				.description("Set the updater (https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm). "
 						+ "Using the Java API this can be concrete instances of the IUpdater interface, including scheduling for e.g. learning rate. For CLI users no scheduling is possible and the "
-						+ "following syntaxes are possible to use (replace the <param> with concrete floating point values);"+LINE_SEP+DL4JUtils.supportedUpdaterInput()));
-		confs.add(new EnumConfigParameter<>(OPT_CONF_NAMES, EnumSet.allOf(OptimizationAlgorithm.class), OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-				.addDescription("The optmization algorithm, for furhter info refer to: https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm"));
-		confs.add(new IntegerConfigParameter(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH, Range.atLeast(1))
-				.addDescription("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0)));
-		confs.add(new IntegerConfigParameter(ITERATION_TIMEOUT_CONF_NAMES, DEFAULT_ITER_TIMEOUT_MINS)
-				.addDescription("Specify a termination criterion for how long a single iteration (i.e. one batch passed through+backprop). Specified as the maximum number of minutes for a single interation."));
-		confs.add(new StringConfigParameter(TRAIN_LOSS_FILE_PATH_CONF_NAMES, null)
-				.addDescription("Specify a file or directory to print loss-scores from the training epochs to (in csv format), default is otherwise to print them in the logfile"));
+						+ "following syntaxes are possible to use (replace the <param> with concrete floating point values);"+LINE_SEP+DL4JUtils.supportedUpdaterInput())
+						.build());
+		confs.add(new EnumConfig.Builder<>(OPT_CONF_NAMES, EnumSet.allOf(OptimizationAlgorithm.class), OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+				.description("The optmization algorithm, for furhter info refer to: https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm")
+				.build());
+		confs.add(new IntegerConfig.Builder(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH).range(Range.atLeast(1))
+				.description("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0))
+				.build());
+		confs.add(new IntegerConfig.Builder(ITERATION_TIMEOUT_CONF_NAMES, DEFAULT_ITER_TIMEOUT_MINS)
+				.description("Specify a termination criterion for how long a single iteration (i.e. one batch passed through+backprop). Specified as the maximum number of minutes for a single interation.")
+				.build());
+		confs.add(new StringConfig.Builder(TRAIN_LOSS_FILE_PATH_CONF_NAMES, null)
+				.description("Specify a file or directory to print loss-scores from the training epochs to (in csv format), default is otherwise to print them in the logfile")
+				.build());
 		// Regularization
-		confs.add(new NumericConfigParameter(WEIGHT_DECAY_CONF_NAMES, 0)
-				.addDescription("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization. Note that L2 and weightDecay cannot be used together."));
-		confs.add(new NumericConfigParameter(L2_CONF_NAMES, 0)
-				.addDescription("L2 regularization term. Disabled by default. Note that L2 and weightDecay cannot be used together."));
-		confs.add(new NumericConfigParameter(L1_CONF_NAMES, 0)
-				.addDescription("L1 regularization term. Disabled by default."));
-		confs.add(new NumericConfigParameter(INPUT_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.))
-				.addDescription("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc."));
-		confs.add(new NumericConfigParameter(HIDDEN_DROP_OUT_CONF_NAMES, 0,Range.closedOpen(0., 1.))
-				.addDescription("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc."));
-
+		confs.add(new NumericConfig.Builder(WEIGHT_DECAY_CONF_NAMES, 0)
+				.description("The weight-decay regularization term, put to <=0 if not to use weight-decay regularization. Note that L2 and weightDecay cannot be used together.")
+				.build());
+		confs.add(new NumericConfig.Builder(L2_CONF_NAMES, 0)
+				.description("L2 regularization term. Disabled by default. Note that L2 and weightDecay cannot be used together.")
+				.build());
+		confs.add(new NumericConfig.Builder(L1_CONF_NAMES, 0)
+				.description("L1 regularization term. Disabled by default.")
+				.build());
+		confs.add(new NumericConfig.Builder(INPUT_DROP_OUT_CONF_NAMES, 0).range(Range.closedOpen(0., 1.))
+				.description("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc.")
+				.build());
+		confs.add(new NumericConfig.Builder(HIDDEN_DROP_OUT_CONF_NAMES, 0).range(Range.closedOpen(0., 1.))
+				.description("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc.")
+				.build());
 		return confs;
 	}
 
@@ -651,7 +668,7 @@ public abstract class DL4JMultiLayerBase
 						throw new IllegalArgumentException("Invalid argument for config parameter " + HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0));
 					}
 
-					LOGGER.debug("Collected widths: " + tmp);
+					LOGGER.debug("Collected widths: {}", tmp);
 					// Verify all withs are >0
 					for (int w : tmp) {
 						if (w <= 0)
@@ -791,9 +808,14 @@ public abstract class DL4JMultiLayerBase
 		LOGGER.debug("Copied over settings to new network-clone: {}",getProperties());
 	}
 
+	/**
+	 * Split into train and internal test records
+	 * @param allRecs All training records available
+	 * @return Pair of training-records, test-records (the test-records may be empty)
+	 */
 	protected Pair<List<DataRecord>,List<DataRecord>> getInternalTrainTestSplits(List<DataRecord> allRecs){
 		if (testSplitFraction <= 0)
-			return Pair.with(allRecs, new ArrayList<>());
+			return Pair.of(allRecs, new ArrayList<>());
 
 		List<DataRecord> cpy = new ArrayList<>(allRecs);
 
@@ -801,81 +823,97 @@ public abstract class DL4JMultiLayerBase
 		List<DataRecord> test = cpy.subList(0, testSplitIndex);
 		List<DataRecord> train = cpy.subList(testSplitIndex, allRecs.size());
 
-		return Pair.with(train, test);
+		return Pair.of(train, test);
 	}
 
 	protected void trainNetwork(MultiLayerConfiguration nnConfig, 
 			List<DataRecord> trainingData,
 			boolean isClassification) throws IllegalArgumentException{
-		// Create a tmp dir to save intermediate models
-		File tmpDir = Files.createTempDir();
-
-		Pair<List<DataRecord>,List<DataRecord>> trainTest = getInternalTrainTestSplits(trainingData);
-		DataConverter trainConv = isClassification ? DataConverter.classification(trainTest.getValue0()) : DataConverter.regression(trainTest.getValue0());
-		// calculate batch size and 
-		int batch = calcBatchSize(trainTest.getValue0().size());
-		DataSetIterator trainIter = new INDArrayDataSetIterator(trainConv, batch);
-
-		// Generate Test set
-		DataSetIterator testIter = null;
-		if (testSplitFraction >0) {
-			DataConverter testConv = isClassification ? DataConverter.classification(trainTest.getValue1(), trainConv.getNumAttributes(), trainConv.getOneHotMapping()) : DataConverter.regression(trainTest.getValue1(),trainConv.getNumAttributes());
-			// Check if batch size is OK for the test-set (that should be much smaller), otherwise pass all records at the same time
-			int nTestEx = trainTest.getValue1().size();
-			int testBatchSize = (nTestEx / batch) >= 2 ? batch : nTestEx;
-			testIter = new INDArrayDataSetIterator(testConv, testBatchSize);
-		} else {
-			testIter = new INDArrayDataSetIterator(trainConv, batch);
-		}
-
-		EarlyStoppingModelSaver<MultiLayerNetwork> saver = new LocalFileModelSaver(tmpDir);
-		EarlyStoppingConfiguration<MultiLayerNetwork> esConf = new EarlyStoppingConfiguration.Builder<MultiLayerNetwork>()
-				.epochTerminationConditions(new MaxEpochsTerminationCondition(numEpoch), // Max num epochs
-						new ScoreImprovementEpochTerminationCondition(earlyStoppingTerminateAfter,1E-5)) // Check for improvement
-				.evaluateEveryNEpochs(evalInterval) // Evaluate every epochInterval 
-				.iterationTerminationConditions(new MaxTimeIterationTerminationCondition(iterationTimeoutMins, TimeUnit.MINUTES)) // Max time per iteration
-				.scoreCalculator(new DataSetLossCalculator(testIter, true)) // Calculate test/train set score
-				.modelSaver(saver)
-				.build();
-
-		EarlyStoppingTrainer trainer = new EarlyStoppingTrainer(esConf,nnConfig,trainIter);
-
-		// Set up the score listener
-		StringBuilder scoreOutput = new StringBuilder();
+		
+				
+		File tmpDir = null;
+		
 		try {
-			EarlyStopScoreListener listener = scoresOutputFile != null ? new EarlyStopScoreListenerFileWrite(scoresOutputFile, testSplitFraction>0,getProperties()) : new EarlyStopScoreListener(scoreOutput, testSplitFraction>0,getProperties());
-			if (testSplitFraction>0) {
-				// If using test-examples for scoring - also add train scores 
-				listener.trainScorer(new DataSetLossCalculator(trainIter, true));
+			// Create a tmp dir to save intermediate models
+			tmpDir = java.nio.file.Files.createTempDirectory("tmp.model").toFile();
+			tmpDir.deleteOnExit();
+
+			Pair<List<DataRecord>,List<DataRecord>> trainTest = getInternalTrainTestSplits(trainingData);
+			DataConverter trainConv = isClassification ? DataConverter.classification(trainTest.getLeft()) : DataConverter.regression(trainTest.getRight());
+			// calculate batch size and 
+			int batch = calcBatchSize(trainTest.getLeft().size());
+			DataSetIterator trainIter = new INDArrayDataSetIterator(trainConv, batch);
+
+			// Generate Test set
+			DataSetIterator testIter = null;
+			if (testSplitFraction >0) {
+				DataConverter testConv = isClassification ? 
+					DataConverter.classification(trainTest.getRight(), trainConv.getNumAttributes(), trainConv.getOneHotMapping()) : 
+					DataConverter.regression(trainTest.getRight(),trainConv.getNumAttributes());
+				// Check if batch size is OK for the test-set (that should be much smaller), otherwise pass all records at the same time
+				int nTestEx = trainTest.getRight().size();
+				int testBatchSize = (nTestEx / batch) >= 2 ? batch : nTestEx;
+				testIter = new INDArrayDataSetIterator(testConv, testBatchSize);
+			} else {
+				testIter = new INDArrayDataSetIterator(trainConv, batch);
 			}
-			trainer.setListener(listener);
-		} catch (IOException e) {
-			LOGGER.debug("Failed setting up score listener",e);
-			throw new IllegalArgumentException(e);
+
+			EarlyStoppingModelSaver<MultiLayerNetwork> saver = new LocalFileModelSaver(tmpDir);
+			EarlyStoppingConfiguration<MultiLayerNetwork> esConf = new EarlyStoppingConfiguration.Builder<MultiLayerNetwork>()
+					.epochTerminationConditions(new MaxEpochsTerminationCondition(numEpoch), // Max num epochs
+							new ScoreImprovementEpochTerminationCondition(earlyStoppingTerminateAfter,1E-5)) // Check for improvement
+					.evaluateEveryNEpochs(evalInterval) // Evaluate every epochInterval 
+					.iterationTerminationConditions(new MaxTimeIterationTerminationCondition(iterationTimeoutMins, TimeUnit.MINUTES)) // Max time per iteration
+					.scoreCalculator(new DataSetLossCalculator(testIter, true)) // Calculate test/train set score
+					.modelSaver(saver)
+					.build();
+
+			EarlyStoppingTrainer trainer = new EarlyStoppingTrainer(esConf,nnConfig,trainIter);
+
+			// Set up the score listener
+			StringBuilder scoreOutput = new StringBuilder();
+			try {
+				EarlyStopScoreListener listener = scoresOutputFile != null ? new EarlyStopScoreListenerFileWrite(scoresOutputFile, testSplitFraction>0,getProperties()) : new EarlyStopScoreListener(scoreOutput, testSplitFraction>0,getProperties());
+				if (testSplitFraction>0) {
+					// If using test-examples for scoring - also add train scores 
+					listener.trainScorer(new DataSetLossCalculator(trainIter, true));
+				}
+				trainer.setListener(listener);
+			} catch (IOException e) {
+				LOGGER.debug("Failed setting up score listener",e);
+				throw new IllegalArgumentException(e);
+			}
+
+
+			// Conduct early stopping training
+			EarlyStoppingResult<MultiLayerNetwork> result = trainer.fit();
+
+			// Debug some metrics
+			LOGGER.debug("Finished training using early stopping, metrics{}  termination reason: {}{}  termination details: {}{}  total epochs: {}/{}{}  best epoch: {}",
+					LINE_SEP, result.getTerminationReason(),LINE_SEP, result.getTerminationDetails(),LINE_SEP, result.getTotalEpochs(),numEpoch,LINE_SEP, result.getBestModelEpoch());
+
+			// Log scores in case not written to file
+			if (scoreOutput.length()>0) {
+				LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
+			}
+
+			if (Double.isNaN(result.getBestModelScore())) {
+				LOGGER.debug("The best score was NaN - so the model should be bad - throwing an exception");
+				throw new IllegalArgumentException("The "+getName() + " model could not be fitted using the current parameters - please revise them");
+			}
+
+			model = result.getBestModel();
+			// Set the labels
+			if (isClassification)
+				model.setLabels(trainConv.getOneHotMapping().getLabelsND());
+
+		} catch (IOException e){
+			LOGGER.error("Failed setting up temporary directory for saving intermediate models",e);
+			throw new IllegalStateException("Failed training model - could not set up a temp directory to save intermediate models");
+		} finally {
+			if (tmpDir != null)
+				tmpDir.delete();
 		}
-
-
-		// Conduct early stopping training
-		EarlyStoppingResult<MultiLayerNetwork> result = trainer.fit();
-
-		// Debug some metrics
-		LOGGER.debug("Finished training using early stopping, metrics{}  termination reason: {}{}  termination details: {}{}  total epochs: {}/{}{}  best epoch: {}",
-				LINE_SEP, result.getTerminationReason(),LINE_SEP, result.getTerminationDetails(),LINE_SEP, result.getTotalEpochs(),numEpoch,LINE_SEP, result.getBestModelEpoch());
-
-		// Log scores in case not written to file
-		if (scoreOutput.length()>0) {
-			LOGGER.debug("Scores produced during training of the network:{}{}",LINE_SEP, scoreOutput.toString());
-		}
-
-		if (Double.isNaN(result.getBestModelScore())) {
-			LOGGER.debug("The best score was NaN - so the model should be bad - throwing an exception");
-			throw new IllegalArgumentException("The "+getName() + " model could not be fitted using the current parameters - please revise them");
-		}
-
-		model = result.getBestModel();
-		// Set the labels
-		if (isClassification)
-			model.setLabels(trainConv.getOneHotMapping().getLabelsND());
 	}
 
 	protected List<Integer> getHiddenLayerWidths(){
