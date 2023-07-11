@@ -28,11 +28,11 @@ target/
 # Eclipse settings
 .settings/
 
+# VSCode settings
+.vscode/
+
 # Do not add /libs folder
 libs/
-
-# CPSign licenses
-**.license
 
 # test output dir
 test_out/
@@ -42,3 +42,6 @@ src/test/cli_based/tmp
 
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
+
+# Mac meta files
+.DS_Store

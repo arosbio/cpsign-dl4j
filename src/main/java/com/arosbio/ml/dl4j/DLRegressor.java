@@ -10,10 +10,10 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 
 import com.arosbio.ml.nd4j.ND4JUtil;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.DataUtils;
-import com.arosbio.modeling.data.FeatureVector;
-import com.arosbio.modeling.ml.algorithms.Regressor;
+import com.arosbio.data.DataRecord;
+import com.arosbio.data.DataUtils;
+import com.arosbio.data.FeatureVector;
+import com.arosbio.ml.algorithms.Regressor;
 
 public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 
@@ -43,6 +43,11 @@ public class DLRegressor extends DL4JMultiLayerBase implements Regressor {
 	@Override
 	public int getID() {
 		return ID;
+	}
+
+	@Override
+	public void fit(List<DataRecord> trainingset) throws IllegalArgumentException {
+		train(trainingset);
 	}
 
 	@Override

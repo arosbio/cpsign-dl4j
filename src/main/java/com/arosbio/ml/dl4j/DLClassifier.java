@@ -14,14 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.arosbio.ml.nd4j.ND4JUtil;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.DataUtils;
-import com.arosbio.modeling.data.FeatureVector;
-import com.arosbio.modeling.ml.algorithms.MultiLabelClassifier;
-import com.arosbio.modeling.ml.algorithms.PseudoProbabilisticClassifier;
-import com.google.common.collect.ImmutableList;
-
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration.ListBuilder;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
@@ -31,9 +23,18 @@ import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DLClassifier extends DL4JMultiLayerBase
-		implements MultiLabelClassifier, PseudoProbabilisticClassifier {
+import com.arosbio.data.DataRecord;
+import com.arosbio.data.DataUtils;
+import com.arosbio.data.FeatureVector;
+import com.arosbio.ml.algorithms.MultiLabelClassifier;
+import com.arosbio.ml.algorithms.PseudoProbabilisticClassifier;
+import com.arosbio.ml.nd4j.ND4JUtil;
+import com.google.common.collect.ImmutableList;
 
+public class DLClassifier extends DL4JMultiLayerBase 
+	implements MultiLabelClassifier, PseudoProbabilisticClassifier {
+
+	@SuppressWarnings("unused")
 	private static final Logger LOGGER = LoggerFactory.getLogger(DLClassifier.class);
 
 	public static final String NAME = "DLClassifier";
@@ -213,6 +214,11 @@ public class DLClassifier extends DL4JMultiLayerBase
 	@Override
 	public Map<Integer, Double> predictProbabilities(FeatureVector vector) throws IllegalStateException {
 		return predictScores(vector);
+	}
+	
+	@Override
+	public void fit(List<DataRecord> trainingset) throws IllegalArgumentException {
+		train(trainingset);
 	}
 
 	@Override

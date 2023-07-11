@@ -12,25 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.arosbio.commons.CollectionUtils;
-import com.arosbio.commons.TypeUtils;
-import com.arosbio.commons.config.BooleanConfig;
-import com.arosbio.commons.config.EnumConfig;
-import com.arosbio.commons.config.IntegerConfig;
-import com.arosbio.commons.config.NumericConfig;
-import com.arosbio.commons.config.StringConfig;
-import com.arosbio.commons.config.StringListConfig;
-import com.arosbio.commons.mixins.ResourceAllocator;
-import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
-import com.arosbio.ml.dl4j.eval.EarlyStopScoreListenerFileWrite;
-import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
-import com.arosbio.modeling.CPSignSettings;
-import com.arosbio.modeling.app.cli.params.converters.IntegerListOrRangeConverter;
-import com.arosbio.modeling.app.cli.utils.MultiArgumentSplitter;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.ml.algorithms.MLAlgorithm;
-import com.google.common.collect.Range;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.deeplearning4j.datasets.iterator.INDArrayDataSetIterator;
 import org.deeplearning4j.earlystopping.EarlyStoppingConfiguration;
@@ -65,11 +46,32 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.slf4j.LoggerFactory;
 
+import com.arosbio.commons.CollectionUtils;
+import com.arosbio.commons.GlobalConfig;
+import com.arosbio.commons.TypeUtils;
+import com.arosbio.commons.config.BooleanConfig;
+import com.arosbio.commons.config.EnumConfig;
+import com.arosbio.commons.config.IntegerConfig;
+import com.arosbio.commons.config.NumericConfig;
+import com.arosbio.commons.config.StringConfig;
+import com.arosbio.commons.config.StringListConfig;
+import com.arosbio.commons.mixins.ResourceAllocator;
+import com.arosbio.cpsign.app.params.converters.IntegerListOrRangeConverter;
+import com.arosbio.cpsign.app.utils.MultiArgumentSplitter;
+import com.arosbio.data.DataRecord;
+import com.arosbio.ml.algorithms.MLAlgorithm;
+import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
+import com.arosbio.ml.dl4j.eval.EarlyStopScoreListenerFileWrite;
+import com.arosbio.ml.io.impl.PropertyNameSettings;
+import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
+import com.google.common.collect.Range;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 
 public abstract class DL4JMultiLayerBase 
 	implements MLAlgorithm, ResourceAllocator {
+
 
 	private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(DL4JMultiLayerBase.class);
 	private static final String LINE_SEP = System.lineSeparator();
@@ -138,13 +140,13 @@ public abstract class DL4JMultiLayerBase
 	 */
 	public DL4JMultiLayerBase(LossFunction lossFunc) {
 		this.loss = lossFunc;
-		LOGGER.debug("Init of network, cpsign-seed: {}",CPSignSettings.getInstance().getRNGSeed());
+		LOGGER.debug("Init of network, cpsign-seed: {}",GlobalConfig.getInstance().getRNGSeed());
 
 		config = new NeuralNetConfiguration.Builder()
 				.activation(Activation.RELU)
 				.weightInit(DEFAULT_WEIGHT_INIT)
 				.updater(new Nesterovs())
-				.seed(CPSignSettings.getInstance().getRNGSeed());
+				.seed(GlobalConfig.getInstance().getRNGSeed());
 	}
 
 	public DL4JMultiLayerBase(LossFunction lossFunc, NeuralNetConfiguration.Builder config) {
@@ -428,9 +430,9 @@ public abstract class DL4JMultiLayerBase
 	public Map<String, Object> getProperties() {
 		Map<String,Object> p = new HashMap<>();
 		// General CPSign stuff
-		p.put(MLAlgorithm.ML_NAME_PARAM_KEY, getName());
-		p.put(MLAlgorithm.ML_ID_PARAM_KEY, getID());
-		p.put("seedValue", config.getSeed());
+		p.put(PropertyNameSettings.ML_TYPE_NAME_KEY, getName());
+		p.put(PropertyNameSettings.ML_TYPE_KEY, getID());
+		p.put(PropertyNameSettings.ML_SEED_VALUE_KEY, config.getSeed());
 
 		// Network structure
 		p.put(HIDDEN_LAYER_WIDTH_CONF_NAMES.get(0), toCPSignConfigList(getHiddenLayerWidths()));
@@ -483,7 +485,7 @@ public abstract class DL4JMultiLayerBase
 		this.config.seed(seed);
 	}
 
-	public long getSeed() {
+	public Long getSeed() {
 		return config.getSeed();
 	}
 
@@ -560,12 +562,21 @@ public abstract class DL4JMultiLayerBase
 		confs.add(new IntegerConfig.Builder(N_HIDDEN_CONF_NAMES, DEFAULT_NUM_HIDDEN_LAYERS)
 				.description("Number of hidden layers")
 				.build());
+		// confs.add(new IntegerConfig.Builder(NET_WIDTH_CONF_NAMES, DEFAULT_NETWORK_WIDTH)
+		// 		.description("The width of each hidden layer, the input and output-layers are defined by the required input and output")
+		// 		.build());
+		// confs.add(new IntegerConfig.Builder(N_HIDDEN_CONF_NAMES, DEFAULT_NUM_HIDDEN_LAYERS)
+		// 		.description("Number of hidden layers").build());
 		confs.add(new StringListConfig.Builder(HIDDEN_LAYER_WIDTH_CONF_NAMES, null)
 				.description(String.format("Set custom layer widths for each layer, setting this will ignore the parameters %s and %s",NET_WIDTH_CONF_NAMES.get(0),N_HIDDEN_CONF_NAMES.get(0)))
 				.build());
 		confs.add(new EnumConfig.Builder<>(WEIGHT_INIT_CONF_NAMES, EnumSet.allOf(WeightInit.class),DEFAULT_WEIGHT_INIT)
 				.description("Weight initialization function/distribution. See Deeplearning4j guides for further details.").build());
-		confs.add(new BooleanConfig.Builder(BATCH_NORM_CONF_NAMES, false).defaultGrid(Arrays.asList(true,false))
+		// confs.add(new BooleanConfig.Builder(BATCH_NORM_CONF_NAMES, false).defaultGrid(Arrays.asList(true,false))
+		// 		.description("Weight initialization function/distribution. See Deeplearning4j guides for further details.")
+		// 		.build());
+		confs.add(new BooleanConfig.Builder(BATCH_NORM_CONF_NAMES, false)
+				.defaultGrid(Arrays.asList(true,false))
 				.description("Add batch normalization between all the dense layers")
 				.build());
 		confs.add(new EnumConfig.Builder<>(GRAD_NORM_CONF_NAMES, EnumSet.allOf(GradientNormalization.class), GradientNormalization.None)
@@ -584,19 +595,29 @@ public abstract class DL4JMultiLayerBase
 		confs.add(new IntegerConfig.Builder(BATCH_SIZE_CONF_NAMES, null)
 				.description("The mini-batch size, will control how many records are passed in each iteration. The default is to use 10 mini-batches for each epoch "
 						+ "- thus calculated at training-time. Setting a value smaller than 0 disables mini-batches and passes _all data_ through at the same time (i.e., one batch per epoch).")
-						.build());
-		confs.add(new NumericConfig.Builder(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC).range(Range.closed(0., .5))
+				.build());
+		confs.add(new NumericConfig.Builder(TEST_FRAC_CONF_NAMES, DEFAULT_TEST_SPLIT_FRAC)
+				.range(Range.closed(0., .5))
 				.description("Fraction of training examples that should be used for monitoring improvements of the network during training, these will not be used in the training of the network. If there are examples in this internal test-set, these will be used for determining early stopping - otherwise all training examples loss scores are used instead.")
 				.build());
 		confs.add(new StringConfig.Builder(UPDATER_CONF_NAMES, "Nesterovs;"+Nesterovs.DEFAULT_NESTEROV_LEARNING_RATE+";"+Nesterovs.DEFAULT_NESTEROV_MOMENTUM)
 				.description("Set the updater (https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm). "
 						+ "Using the Java API this can be concrete instances of the IUpdater interface, including scheduling for e.g. learning rate. For CLI users no scheduling is possible and the "
 						+ "following syntaxes are possible to use (replace the <param> with concrete floating point values);"+LINE_SEP+DL4JUtils.supportedUpdaterInput())
-						.build());
+// <<<<<<< HEAD
+// 						.build());
+// 		confs.add(new EnumConfig.Builder<>(OPT_CONF_NAMES, EnumSet.allOf(OptimizationAlgorithm.class), OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+// 				.description("The optmization algorithm, for furhter info refer to: https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm")
+// 				.build());
+// 		confs.add(new IntegerConfig.Builder(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH).range(Range.atLeast(1))
+// =======
+				.build());
 		confs.add(new EnumConfig.Builder<>(OPT_CONF_NAMES, EnumSet.allOf(OptimizationAlgorithm.class), OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
 				.description("The optmization algorithm, for furhter info refer to: https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training#updater-and-optimization-algorithm")
 				.build());
-		confs.add(new IntegerConfig.Builder(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH).range(Range.atLeast(1))
+		confs.add(new IntegerConfig.Builder(EARLY_STOP_AFTER_CONF_NAMES, DEFAULT_ES_N_EXTRA_EPOCH)
+				.range(Range.atLeast(1))
+// >>>>>>> 8cbf1a3 (update to 2.0.0-rc1 version of cpsign)
 				.description("Determines how many epochs to continue to run without having an improvement in the loss function. If there should be no early stopping (always run all specified epochs) specify the same number as that of parameter "+N_EPOCH_CONF_NAMES.get(0))
 				.build());
 		confs.add(new IntegerConfig.Builder(ITERATION_TIMEOUT_CONF_NAMES, DEFAULT_ITER_TIMEOUT_MINS)
@@ -615,12 +636,24 @@ public abstract class DL4JMultiLayerBase
 		confs.add(new NumericConfig.Builder(L1_CONF_NAMES, 0)
 				.description("L1 regularization term. Disabled by default.")
 				.build());
-		confs.add(new NumericConfig.Builder(INPUT_DROP_OUT_CONF_NAMES, 0).range(Range.closedOpen(0., 1.))
+// <<<<<<< HEAD
+// 		confs.add(new NumericConfig.Builder(INPUT_DROP_OUT_CONF_NAMES, 0).range(Range.closedOpen(0., 1.))
+// 				.description("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc.")
+// 				.build());
+// 		confs.add(new NumericConfig.Builder(HIDDEN_DROP_OUT_CONF_NAMES, 0).range(Range.closedOpen(0., 1.))
+// 				.description("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc.")
+// 				.build());
+// =======
+		confs.add(new NumericConfig.Builder(INPUT_DROP_OUT_CONF_NAMES, 0)
+				.range(Range.closedOpen(0., 1.))
 				.description("Drop-out rate for the input layer. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc.")
 				.build());
-		confs.add(new NumericConfig.Builder(HIDDEN_DROP_OUT_CONF_NAMES, 0).range(Range.closedOpen(0., 1.))
+		confs.add(new NumericConfig.Builder(HIDDEN_DROP_OUT_CONF_NAMES, 0)
+				.range(Range.closedOpen(0., 1.))
 				.description("Drop-out rate for the hidden layers. 0 means no drop-out, 0.5 is 50%% chance of drop-out etc.")
 				.build());
+
+// >>>>>>> 8cbf1a3 (update to 2.0.0-rc1 version of cpsign)
 		return confs;
 	}
 
@@ -828,18 +861,20 @@ public abstract class DL4JMultiLayerBase
 
 	protected void trainNetwork(MultiLayerConfiguration nnConfig, 
 			List<DataRecord> trainingData,
-			boolean isClassification) throws IllegalArgumentException{
-		
-				
+			boolean isClassification) throws IllegalArgumentException {
+		// Create a tmp dir to save intermediate models
 		File tmpDir = null;
-		
-		try {
-			// Create a tmp dir to save intermediate models
-			tmpDir = java.nio.file.Files.createTempDirectory("tmp.model").toFile();
-			tmpDir.deleteOnExit();
+		try{
+			tmpDir = java.nio.file.Files.createTempDirectory("models").toFile();
+			LOGGER.debug("created temporary directory '{}' for saving intermediate models in", tmpDir);
+		} catch (IOException e){
+			LOGGER.debug("Failed setting up a temporary directory to save intermediate models in", e);
+			throw new RuntimeException("Failed ");
+		}
 
+		try {
 			Pair<List<DataRecord>,List<DataRecord>> trainTest = getInternalTrainTestSplits(trainingData);
-			DataConverter trainConv = isClassification ? DataConverter.classification(trainTest.getLeft()) : DataConverter.regression(trainTest.getRight());
+			DataConverter trainConv = isClassification ? DataConverter.classification(trainTest.getLeft()) : DataConverter.regression(trainTest.getLeft());
 			// calculate batch size and 
 			int batch = calcBatchSize(trainTest.getLeft().size());
 			DataSetIterator trainIter = new INDArrayDataSetIterator(trainConv, batch);
@@ -847,9 +882,7 @@ public abstract class DL4JMultiLayerBase
 			// Generate Test set
 			DataSetIterator testIter = null;
 			if (testSplitFraction >0) {
-				DataConverter testConv = isClassification ? 
-					DataConverter.classification(trainTest.getRight(), trainConv.getNumAttributes(), trainConv.getOneHotMapping()) : 
-					DataConverter.regression(trainTest.getRight(),trainConv.getNumAttributes());
+				DataConverter testConv = isClassification ? DataConverter.classification(trainTest.getRight(), trainConv.getNumAttributes(), trainConv.getOneHotMapping()) : DataConverter.regression(trainTest.getRight(),trainConv.getNumAttributes());
 				// Check if batch size is OK for the test-set (that should be much smaller), otherwise pass all records at the same time
 				int nTestEx = trainTest.getRight().size();
 				int testBatchSize = (nTestEx / batch) >= 2 ? batch : nTestEx;
@@ -907,9 +940,6 @@ public abstract class DL4JMultiLayerBase
 			if (isClassification)
 				model.setLabels(trainConv.getOneHotMapping().getLabelsND());
 
-		} catch (IOException e){
-			LOGGER.error("Failed setting up temporary directory for saving intermediate models",e);
-			throw new IllegalStateException("Failed training model - could not set up a temp directory to save intermediate models");
 		} finally {
 			if (tmpDir != null)
 				tmpDir.delete();

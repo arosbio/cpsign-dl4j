@@ -17,10 +17,11 @@ import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.DataUtils;
-import com.arosbio.modeling.data.FeatureVector;
-import com.arosbio.modeling.data.FeatureVector.Feature;
+import com.arosbio.data.DataRecord;
+import com.arosbio.data.DataUtils;
+import com.arosbio.data.FeatureVector;
+import com.arosbio.data.FeatureVector.Feature;
+
 
 public class ND4JUtil {
 	

@@ -1,25 +1,18 @@
 package test_utils;
 
-import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 
-import com.arosbio.auth.InvalidLicenseException;
-import com.arosbio.modeling.CPSignFactory;
-import com.arosbio.modeling.cheminf.NamedLabels;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.Dataset;
-import com.arosbio.modeling.data.Dataset.SubSet;
-import com.arosbio.modeling.data.FeatureVector.Feature;
+import com.arosbio.data.DataRecord;
+import com.arosbio.data.Dataset;
+import com.arosbio.data.Dataset.SubSet;
+import com.arosbio.data.FeatureVector.Feature;
+import com.arosbio.data.NamedLabels;
 
 public class UnitTestBase {
 	
@@ -52,36 +45,6 @@ public class UnitTestBase {
 	
 	public static final String ENRICH_REL_PATH = "/data/reg/enrich.svmlight.gz";
 	
-
-	/**
-	 * Validates credentials to CPSign by searching the src/test/resources/licenses/ directory for a license.
-	 * @throws IOException
-	 */
-	@BeforeClass
-	public static void runPrior() throws IOException, InvalidLicenseException {
-		new CPSignFactory(getFirstLicenseFile().toURI());
-	}
-	
-	public static File getFirstLicenseFile() {
-		FilenameFilter filter = new FilenameFilter() {
-			@Override
-			public boolean accept(File f, String name) {
-				return name.endsWith(".license");
-			}
-		};
-		URL url2 = UnitTestBase.class.getResource("/licenses");
-		
-		File wd = new File(url2.getFile());
-		String[] files = wd.list(filter);
-		if (files.length < 1) {
-			System.err.println("No lincese found in the required location, please place a valid license in the directory:\n"+ 
-					wd + "\nAnd try again");
-			Assert.fail("No license found");
-		}
-		return new File(wd,files[0]);
-		
-	}
-
 	public static Dataset.SubSet getIrisClassificationData() throws IOException {
 		try (InputStream is = UnitTestBase.class.getResourceAsStream(IRIS_REL_PATH)){
 			return Dataset.fromLIBSVMFormat(is).getDataset();

@@ -17,15 +17,14 @@ import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.factory.Nd4j;
 
 import com.arosbio.ml.nd4j.ND4JUtil.DataConverter;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.DataUtils;
-//import com.arosbio.testutils.TestUtils;
-import com.arosbio.modeling.data.Dataset.SubSet;
-import com.arosbio.modeling.data.FeatureVector;
-import com.arosbio.modeling.data.SparseFeature;
-import com.arosbio.modeling.data.SparseFeatureImpl;
-import com.arosbio.modeling.data.SparseVector;
-import com.arosbio.modeling.data.transform.format.MakeDenseTransformer;
+import com.arosbio.data.DataRecord;
+import com.arosbio.data.DataUtils;
+import com.arosbio.data.Dataset.SubSet;
+import com.arosbio.data.FeatureVector;
+import com.arosbio.data.SparseFeature;
+import com.arosbio.data.SparseFeatureImpl;
+import com.arosbio.data.SparseVector;
+import com.arosbio.data.transform.format.MakeDenseTransformer;
 
 import test_utils.UnitTestBase;
 

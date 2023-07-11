@@ -9,24 +9,23 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.arosbio.commons.logging.LoggerUtils;
-import com.arosbio.modeling.data.DataRecord;
-import com.arosbio.modeling.data.Dataset;
-import com.arosbio.modeling.data.Dataset.SubSet;
-import com.arosbio.modeling.data.transform.scale.RobustScaler;
-import com.arosbio.modeling.data.transform.scale.Standardizer;
-import com.arosbio.modeling.ml.metrics.MetricFactory;
-import com.arosbio.modeling.ml.metrics.SingleValuedMetric;
-import com.arosbio.modeling.ml.metrics.regression.MAE;
-import com.arosbio.modeling.ml.metrics.regression.R2;
-import com.arosbio.modeling.ml.metrics.regression.RMSE;
-import com.arosbio.modeling.ml.testing.RandomSplit;
-import com.arosbio.modeling.ml.testing.TestRunner;
-
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
 import org.nd4j.linalg.learning.config.Sgd;
+
+import com.arosbio.data.DataRecord;
+import com.arosbio.data.Dataset;
+import com.arosbio.data.Dataset.SubSet;
+import com.arosbio.data.transform.scale.RobustScaler;
+import com.arosbio.data.transform.scale.Standardizer;
+import com.arosbio.ml.metrics.MetricFactory;
+import com.arosbio.ml.metrics.SingleValuedMetric;
+import com.arosbio.ml.metrics.regression.MAE;
+import com.arosbio.ml.metrics.regression.R2;
+import com.arosbio.ml.metrics.regression.RMSE;
+import com.arosbio.ml.testing.RandomSplit;
+import com.arosbio.ml.testing.TestRunner;
 
 import test_utils.UnitTestBase;
 
@@ -51,7 +50,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 		List<DataRecord> testRecs = new ArrayList<>(trainingData.subList(0, 100));
 		trainingData.subList(0, 100).clear();
 
-		LoggerUtils.setDebugMode(System.out);
+		// LoggerUtils.setDebugMode(System.out);
 		model.train(trainingData);
 
 		MAE absErr = new MAE();
@@ -105,7 +104,9 @@ public class TestDL4JRegressor extends UnitTestBase {
 		Assert.assertEquals(r2.getScore(), r2_2.getScore(), .00001);
 		Assert.assertEquals(rmse.getScore(), rmse2.getScore(), .00001);
 
-		LoggerUtils.reloadLogger();
+		// LoggerUtils.reloadLogger();
+		model.releaseResources();
+		loaded.releaseResources();
 		
 	}
 	
@@ -121,7 +122,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 		
 		TestRunner runner = new TestRunner.Builder(new RandomSplit(.2)).build();
 		Dataset ds = new Dataset();
-		ds.setDataset(data);
+		ds.withDataset(data);
 		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());
 		runner.evaluateRegressor(ds, regressor, metrics);
 		System.err.println(metrics);
@@ -141,7 +142,7 @@ public class TestDL4JRegressor extends UnitTestBase {
 		
 		TestRunner runner = new TestRunner.Builder(new RandomSplit(.2)).build();
 		Dataset ds = new Dataset();
-		ds.setDataset(data);
+		ds.withDataset(data);
 		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());
 		runner.evaluateRegressor(ds, regressor, metrics);
 		System.err.println(metrics);

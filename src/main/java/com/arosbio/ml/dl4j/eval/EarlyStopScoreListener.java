@@ -33,7 +33,7 @@ public class EarlyStopScoreListener implements EarlyStoppingListener<MultiLayerN
 	private Stopwatch watch = new Stopwatch();
 
 	public EarlyStopScoreListener(Appendable out, boolean scoresBasedOnTest) throws IOException {
-		printer = CSVFormat.DEFAULT.withCommentMarker('#').withAutoFlush(true).print(out);
+		printer = CSVFormat.DEFAULT.builder().setCommentMarker('#').setAutoFlush(true).build().print(out);
 		this.scoreBasedOnTest = scoresBasedOnTest;
 	}
 
