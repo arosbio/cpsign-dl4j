@@ -55,21 +55,20 @@
 
 		<dependency>
 			<groupId>com.arosbio</groupId>
-			<artifactId>cpsign</artifactId> <!--change to : confai (no need for any chemistry!)-->
+			<artifactId>confai</artifactId>
 			<version>${cpsign.version}</version>
 			<!-- Remove if merging with main CPSign code -->
 			<!--<scope>provided</scope> -->
 		</dependency>
 
 		<!-- Declare a test-dependency on the CLI version, to verify things work there as well -->
-		<!--
+		
 		<dependency>
 			<groupId>com.arosbio</groupId>
 			<artifactId>cpsign</artifactId>
 			<version>${cpsign.version}</version>
 			<scope>test</scope>
-		</dependency>
-		-->
+		</dependency>	
 		
 		<!-- deeplearning4j-core: contains main functionality and neural networks -->
 		<dependency>

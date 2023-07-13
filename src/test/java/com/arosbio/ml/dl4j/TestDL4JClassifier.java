@@ -518,7 +518,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		clf.setConfigParameters(params);
 
 		// As a single string
-		params.put("layers", "10,20,30");
+		params.put("layers", Arrays.asList(10,20,30));
 		clf.setConfigParameters(params);
 		List<Integer> layers = clf.getHiddenLayerWidths();
 		Assert.assertEquals(Arrays.asList(10, 20, 30), layers);

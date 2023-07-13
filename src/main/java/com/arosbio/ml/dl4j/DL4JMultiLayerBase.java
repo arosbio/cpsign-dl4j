@@ -56,8 +56,7 @@ import com.arosbio.commons.config.NumericConfig;
 import com.arosbio.commons.config.StringConfig;
 import com.arosbio.commons.config.StringListConfig;
 import com.arosbio.commons.mixins.ResourceAllocator;
-import com.arosbio.cpsign.app.params.converters.IntegerListOrRangeConverter;
-import com.arosbio.cpsign.app.utils.MultiArgumentSplitter;
+
 import com.arosbio.data.DataRecord;
 import com.arosbio.ml.algorithms.MLAlgorithm;
 import com.arosbio.ml.dl4j.eval.EarlyStopScoreListener;
@@ -690,11 +689,6 @@ public abstract class DL4JMultiLayerBase
 					} else if (c.getValue() instanceof int[]){
 						for (int w : (int[])c.getValue()) {
 							tmp.add(w);
-						}
-					} else if (c.getValue() instanceof String) {
-						List<String> splits = MultiArgumentSplitter.split(c.getValue().toString());
-						for (String s : splits) {
-							tmp.addAll(new IntegerListOrRangeConverter().convert(s));
 						}
 					} else {
 						LOGGER.debug("Invalid argument type for parameter {}: {}",HIDDEN_LAYER_WIDTH_CONF_NAMES,c.getValue());
