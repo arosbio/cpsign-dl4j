@@ -7,7 +7,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<cpsign.version>2.0.0-rc1</cpsign.version>
+		<cpsign.version>2.0.0-rc3</cpsign.version>
 		<dl4j.version>1.0.0-M2.1</dl4j.version>
     	<maven.compiler.source>11</maven.compiler.source>
     	<maven.compiler.target>11</maven.compiler.target>
@@ -230,14 +230,16 @@ d        <dependency>
 						<configuration>
 							<!-- If you remove the artifactSet below you will include the main CPSign code and build an Uber-jar including all required code for running 
                         	everything from a single JAR-->
-							<artifactSet>
-								<excludes>com.arosbio:cpsign</excludes>
-							</artifactSet>
-							<transformers>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-									<resource>reference.conf</resource>
-								</transformer>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                        	<artifactSet>
+                				<excludes>com.arosbio:confai</excludes>
+								<!--<excludes>com.arosbio:encrypt-api-->
+                			</artifactSet>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>reference.conf</resource>
+                                </transformer>
+                                <transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
 										<Main-Class>${main.class}</Main-Class>
 

@@ -418,8 +418,9 @@ public class TestDL4JClassifier extends UnitTestBase {
 		// LoggerUtils.setDebugMode(System.out);
 		clf.train(allData);
 		
-		System.err.println("test label: "+testRec.getLabel());
-		System.err.println("Scores: "+ clf.predictScores(allData.get(0).getFeatures()));
+		Assert.assertEquals(testRec.getLabel(), ClassificationUtils.getPredictedClass(clf.predictScores(testRec.getFeatures())),0.0);
+		// System.err.println("test label: "+testRec.getLabel());
+		// System.err.println("Scores: "+ clf.predictScores(testRec.getFeatures()));
 		clf.releaseResources();
 
 	}
