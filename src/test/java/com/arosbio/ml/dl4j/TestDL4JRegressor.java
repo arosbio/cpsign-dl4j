@@ -19,6 +19,7 @@ import com.arosbio.data.Dataset;
 import com.arosbio.data.Dataset.SubSet;
 import com.arosbio.data.transform.scale.RobustScaler;
 import com.arosbio.data.transform.scale.Standardizer;
+import com.arosbio.ml.metrics.Metric;
 import com.arosbio.ml.metrics.MetricFactory;
 import com.arosbio.ml.metrics.SingleValuedMetric;
 import com.arosbio.ml.metrics.regression.MAE;
@@ -65,9 +66,9 @@ public class TestDL4JRegressor extends UnitTestBase {
 		}
 		
 
-		System.out.println(absErr);
-		System.out.println(r2);
-		System.out.println(rmse);
+		// System.out.println(absErr);
+		// System.out.println(r2);
+		// System.out.println(rmse);
 
 
 
@@ -96,9 +97,9 @@ public class TestDL4JRegressor extends UnitTestBase {
 			rmse2.addPrediction(r.getLabel(), y_hat);
 		}
 
-		System.out.println(absErr2);
-		System.out.println(r2_2);
-		System.out.println(rmse2);
+		// System.out.println(absErr2);
+		// System.out.println(r2_2);
+		// System.out.println(rmse2);
 		
 		Assert.assertEquals(absErr.getScore(), absErr2.getScore(), .00001);
 		Assert.assertEquals(r2.getScore(), r2_2.getScore(), .00001);
@@ -124,8 +125,8 @@ public class TestDL4JRegressor extends UnitTestBase {
 		Dataset ds = new Dataset();
 		ds.withDataset(data);
 		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());
-		runner.evaluateRegressor(ds, regressor, metrics);
-		System.err.println(metrics);
+		List<Metric> metricsOut = runner.evaluateRegressor(ds, regressor, metrics);
+		System.err.println("drop-out: " + metricsOut);
 //		[MAE : 0.6156956466600819, R^2 : 0.37198641176608016, RMSE : 0.7879424842476385]
 		regressor.releaseResources();
 	}
@@ -144,13 +145,13 @@ public class TestDL4JRegressor extends UnitTestBase {
 		Dataset ds = new Dataset();
 		ds.withDataset(data);
 		List<SingleValuedMetric> metrics = MetricFactory.filterToSingleValuedMetrics(MetricFactory.getRegressorMetrics());
-		runner.evaluateRegressor(ds, regressor, metrics);
-		System.err.println(metrics);
+		List<Metric> metricsOut = runner.evaluateRegressor(ds, regressor, metrics);
+		System.err.println("weight decay: " + metricsOut);
 //		[MAE : 0.5570755737478232, R^2 : 0.46266618968589535, RMSE : 0.7607753285278875]
 		regressor.releaseResources();
 	}
 	
-	@Test
+	// @Test
 	public void checkDefaultOptAlg() {
 		System.err.println(new NeuralNetConfiguration.Builder().getIUpdater());
 	}

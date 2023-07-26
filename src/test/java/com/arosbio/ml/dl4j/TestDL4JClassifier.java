@@ -45,10 +45,15 @@ import com.arosbio.cpsign.app.CPSignApp;
 import com.arosbio.cpsign.app.ExplainArgument;
 import com.arosbio.cpsign.app.Train;
 import com.arosbio.cpsign.app.TuneScorer;
+import com.arosbio.cpsign.app.utils.CLIConsole;
+import com.arosbio.cpsign.app.utils.CLIConsole.VerbosityLvl;
 import com.arosbio.data.DataRecord;
+import com.arosbio.data.DataUtils;
 import com.arosbio.data.Dataset;
 import com.arosbio.data.Dataset.SubSet;
 import com.arosbio.data.NamedLabels;
+import com.arosbio.data.transform.ColumnSpec;
+import com.arosbio.data.transform.feature_selection.DropColumnSelector;
 import com.arosbio.data.transform.scale.RobustScaler;
 import com.arosbio.data.transform.scale.Standardizer;
 import com.arosbio.ml.ClassificationUtils;
@@ -65,13 +70,13 @@ import com.arosbio.ml.testing.RandomSplit;
 import com.arosbio.ml.testing.TestRunner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Range;
 
 import test_utils.UnitTestBase;
 
 public class TestDL4JClassifier extends UnitTestBase {
 
 	@Test
-// <<<<<<< HEAD
 	public void testTrainSaveAndLoad_StandardLabels() throws IllegalArgumentException, IOException {
 		GlobalConfig.getInstance().setRNGSeed(56789);
 		DLClassifier clf = new DLClassifier();
@@ -508,7 +513,8 @@ public class TestDL4JClassifier extends UnitTestBase {
 
 	@Test
 	public void getParametersThroughCPSign() throws Exception {
-		new ExplainArgument.MLAlgInfo().call();
+		CLIConsole.getInstance().setVerbosity(VerbosityLvl.SILENT);
+		Assert.assertEquals(Integer.valueOf(0), new ExplainArgument.MLAlgInfo().call());
 	}
 
 	@Test
@@ -592,7 +598,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 	 * predict-time.
 	 */
 	@Test
-	public void bugSearching() throws Exception {
+	public void testDataHasMoreFeaturesThanTrainData() throws Exception {
 
 		GlobalConfig.getInstance().setRNGSeed(1637217339288l);
 		// Predictor
@@ -607,6 +613,21 @@ public class TestDL4JClassifier extends UnitTestBase {
 
 		ds.add(new SDFile(TestDL4JClassifier.class.getResource(AmesBinaryClf.AMES_REL_PATH).toURI()).getIterator(),
 				AmesBinaryClf.PROPERTY, AmesBinaryClf.LABELS);
+		
+		SubSet[] splits = ds.getDataset().splitRandom(1242512,.3);
+		SubSet testData = splits[0]; // 30% as test-data
+		SubSet trainData = splits[1]; // 70% as train-data
+		
+
+		int maxTestFeatureIndex = DataUtils.getMaxFeatureIndex(testData);
+
+		// Manually remove so the largest feature index is smaller than max test-features index
+		trainData = new DropColumnSelector(new ColumnSpec(Range.atLeast(maxTestFeatureIndex-20)))
+			.fitAndTransform(trainData);
+		Assert.assertTrue("should had have at least 20 features less", DataUtils.getMaxFeatureIndex(trainData) <= (maxTestFeatureIndex-20));
+
+		// Set the edited 70% data as train-data
+		ds.withDataset(trainData); 
 		// System.err.println("max index: " +
 		// (DataUtils.getMaxFeatureIndex(ds.getDataset())+1));
 		// System.err.println(ds);
@@ -659,7 +680,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 																												// picked
 																												// up
 																												// correctly
-				"--test-strategy", "TestTrainSplit",
+				"--test-strategy", "TestTrainSplit:stratify=True",
 				"--grid", "updater=Sgd;0.01", // ,Sgd;0.1", //"width=5,10,15", //
 				"-rf", "tsv",
 				"--generate@file", relativeOutFile
@@ -689,12 +710,12 @@ public class TestDL4JClassifier extends UnitTestBase {
 			.lossOutput("some_path/file.csv")
 			.networkWidth(42)
 			.activation(Activation.TANH)
-			.setSeed(seed);;
-		System.err.println(clf.getProperties());
+			.setSeed(seed);
+		// System.err.println(clf.getProperties());
 		Thread.sleep(1000l);
 
 		DLClassifier clone = clf.clone();
-		System.err.println(clone.getProperties());
+		// System.err.println(clone.getProperties());
 		
 //		System.err.println(clf.getProperties());
 		Assert.assertEquals(Long.valueOf(seed), clf.getSeed());
@@ -745,7 +766,7 @@ public class TestDL4JClassifier extends UnitTestBase {
 		// Predictor
 		DLClassifier clf = new DLClassifier().clone(); 
 		clf.nEpoch(1000).testSplitFraction(0d);
-		System.err.println(clf.getProperties());
+		// System.err.println(clf.getProperties());
 		ACPClassifier acp = new ACPClassifier(new InverseProbabilityNCM(clf), new RandomSampling(1, .2));
 		
 		// Data
