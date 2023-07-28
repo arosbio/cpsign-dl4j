@@ -2,6 +2,7 @@
 This repo contains an extension to [CPSign](https://arosbio.com), which adds the possibility to build DL models using the [Deeplearning4j library (DL4J)](https://deeplearning4j.konduit.ai/). The DL4J package is rather large and also has the possibility to use hardware acceleration when possible.
 
 ## Table of Contents <!-- omit in toc -->
+- [License](#license)
 - [Building](#building)
   - [Run tests](#run-unit-tests)
   - [Building a thin jar](#option-1-build-a-thin-jar)
@@ -15,6 +16,9 @@ This repo contains an extension to [CPSign](https://arosbio.com), which adds the
 - [Change log](#change-log)
 - [TODOs](#todos)
 
+
+## License
+CPSign is dual licensed, where the user can choose between the [GNU General Public License](http://www.gnu.org/licenses/gpl-3.0.html) with additional terms (which can be found at the [Aros Bio website](https://arosbio.com/cpsign/license)) or a [commercial license](comm-license.txt). See further details at the [Aros Bio website](https://arosbio.com/cpsign/license).
 
 ## Building 
 This project uses Maven as build tool and depends on the `confai` module of [CPSign](https://github.com/arosbio/cpsign). The build specification [pom](pom.xml) is currently configured to run on CPU on OS X with M1 chip, and needs to be configured differently for different hardware, i.e. in case GPU/CUDA is available. see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information. The build should be tweaked in order to fit your intended usecase, for convenience we have supplied two build profiles [thinjar](#option-1-build-a-thin-jar) and [fatjar](#option-2-build-a-fat-jar) - the former should be useful in case you wish to incorporate `cpsign-dl4j` into another piece of software, and the latter is used for using directly on the CLI. Read more in each section for greater details.
