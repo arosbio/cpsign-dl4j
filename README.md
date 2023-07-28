@@ -1,14 +1,14 @@
 # CPSign DL4J extension <!-- omit in toc -->
-This repo contains an extension to [CPSign](https://arosbio.com), which adds the possibility to build DL models using the [Deeplearning4j library (DL4J)](https://deeplearning4j.konduit.ai/). The DL4J package is rather large and also has the possibility to use hardware acceleration when possible, so the user is encouraged to tweak the `pom.xml` file accordingly in case a different backend can be used in order to improve computational performance and runtime.
+This repo contains an extension to [CPSign](https://arosbio.com), which adds the possibility to build DL models using the [Deeplearning4j library (DL4J)](https://deeplearning4j.konduit.ai/). The DL4J package is rather large and also has the possibility to use hardware acceleration when possible.
 
 ## Table of Contents <!-- omit in toc -->
 - [Building](#building)
-  - [Step 1: Install CPSign to your local maven repo](#step-1-install-cpsign-to-your-local-maven-repo)
-  - [Run unit-tests](#run-unit-tests)
-  - [Building an uber jar](#building-an-uber-jar)
+  - [Run tests](#run-unit-tests)
+  - [Building a thin jar](#option-1-build-a-thin-jar)
+  - [Building a fat jar](#option-2-build-a-fat-jar)
 - [Running](#running)
-  - [Running from CLI](#running-from-cli)
   - [Running from Java](#running-from-java)
+  - [Running from CLI](#running-from-cli)
 - [Performance notes](#performance-notes)
   - [Backends](#backends)
   - [Tweaking parallization](#tweaking-parallization)
@@ -17,10 +17,7 @@ This repo contains an extension to [CPSign](https://arosbio.com), which adds the
 
 
 ## Building 
-This project uses Maven as build tool. CPSign comes as a uber/fat-jar including all required dependencies. The building process is thus slightly different than the standard maven build where transitive dependencies can be compared between the explicit dependencies. This could cause issues with different versions of required depencies being packaged in the final jar. If there are issues that can be traced back to this, we will also start making a 'thin CPSign' with accompanied pom-file so that the package and dependencies can follow the standard maven build flow.
-
-### Step 1: Install CPSign to your local maven repo
-Using the [maven install](https://maven.apache.org/plugins/maven-install-plugin/index.html) plugin with the goal `install:install-file` CPSign can be installed to your local maven cached repository. For convenience we've included the bash script [install_cpsign.sh](install_cpsign.sh) that does this for you, assuming that you have cpsign in the directory `libs` located in the project root directory. You may change this to suit your needs, e.g. following updated versions of CPSign.
+This project uses Maven as build tool and depends on the `confai` module of [CPSign](https://github.com/arosbio/cpsign). The build specification [pom](pom.xml) is currently configured to run on CPU on OS X with M1 chip, and needs to be configured differently for different hardware, i.e. in case GPU/CUDA is available. see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information. The build should be tweaked in order to fit your intended usecase, for convenience we have supplied two build profiles [thinjar](#option-1-build-a-thin-jar) and [fatjar](#option-2-build-a-fat-jar) - the former should be useful in case you wish to incorporate `cpsign-dl4j` into another piece of software, and the latter is used for using directly on the CLI. Read more in each section for greater details.
 
 ### Run unit-tests
 To verify that everything is working as it should, run unit tests using the standard:
@@ -28,47 +25,46 @@ To verify that everything is working as it should, run unit tests using the stan
 ```
 mvn test
 ```
+Note that the provided data sets are very small so the acheived accuracies may seem disappointing - if you wish to see more representative results of predictive performance you should try out running on your own data. Further note that if you update the `pom.xml` for another production environment than your build machine the tests will fail due to ND4J should be missing the native code for running on your build platform. You can e.g. run tests on the `nd4j-native` and change that for e.g. CUDA before build time.
 
-### Building an uber jar
-The pom file is currently configured to build the DL4J extension including all DL4J libraries and its sub-dependencies, but _excluding_ CPSign main code. Running 
+### Option 1: build a thin jar
+This build profile is active by default and will only package the `cpsign-dl4j` code and none of the required dependencies, so it is intended to be used as a component into other maven builds. So this build is run by the standard `mvn package`, with any other optional arguments such as `-DskipTests`.
 
-```
-mvn clean package
-```
+### Option 2: build a fat jar
+This build is triggered by adding the profile `fatjar`, i.e. by running: `mvn package -P fatjar`. In contrast to the `thinjar` this build will include all required dependencies, with an additional dependency to `cpsign` (i.e. the CLI module) so that the produced jar can be run directly on the CLI. That jar file is configured to run the `CPSignApp` as main class (i.e. the same as for CPSign). 
 
-will compile and package the jar and put it in the [target](target) directory. You may want to include the option `-DskipTests=true` if you are sure everything is working as it should, or in case you are compiling using a different Nd4j backend which only runs on a different machine which supports the other backend. If everything should be included in the final jar, including the CPSign main code, minor adjustements can be made to the `pom.xml` - required changes are marked in the file in order to do this.
 
 ## Running 
-
-### Running from CLI
-From CPSign 2.0 the main JAR file is a 'really executable JAR', meaning that it can be run simply with `./cpsign` if correct file permissions has been set on the file. When having two separate JAR files the invocation must be altered into;
-```
-java -cp <path-to-cpsign>:<path-to-dl4j-extension> com.arosbio.modeling.app.cli.CPSignApp <options>
-```
-Depending on if your running on a Linxus/Unix or Windows system you may have to tweak the separator (`:` in this example) between the two JAR files. If you have both JAR files in your current directory and they are called `cpsign` and `cpsign-dl4j.jar` the invocation would be;
-```
-java -cp cpsign:cpsign-dl4j.jar com.arosbio.modeling.app.cli.CPSignApp <options>
-```
-
-An alternative approach is by tweaking the pom-file to merge both the main CPSign code with the DL4J extension, thus creating a single uber-JAR and the invocation can be simplified into;
-```
-java -jar cpsign-dl4j.java <options>
-```
-given that the property `<main.class>` is changed into `com.arosbio.modeling.app.cli.CPSignApp` which is required to run the CPSign CLI start-up class. 
 
 ### Running from Java
 Including this extension in a Java project would be as simple as to include the built JAR on the class path of your own probject. 
 
+### Running from CLI
+If the fat jar is built (Option 2 above), CPSign and the DL4j extension is merged into a single JAR file and the main class in the manifest file is configured to the CLI entrypoint of CPSign, running the application is thus as straightforward as;
+
+```
+java -jar <jar-name>
+```
+
+Where `jar-name` is something like: `cpsign-dl4j-[version]-fatjar.jar`.
+
 ## Performance notes
-The two algorithms ([DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifier.java) and [DLRegressor](src/main/java/com/arosbio/ml/dl4j/DLRegressor.java)) have been set using the default values from the [Deeplearning4j trouble shooting guide](https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training). These implementations are fairly 'simple', and supports more configuration possibilities using the Java API (e.g. when it comes to strategies for the IUpdater where e.g. learning rate can be altered during training time). More complex networks will need to be implemented separately. At least these serves as a starting point.
+The two algorithms ([DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifier.java) and [DLRegressor](src/main/java/com/arosbio/ml/dl4j/DLRegressor.java)) have been set using the default values from the [Deeplearning4j trouble shooting guide](https://deeplearning4j.konduit.ai/deeplearning4j/how-to-guides/tuning-and-training/troubleshooting-training). These implementations are fairly 'simple', and supports more configuration possibilities using the Java API (e.g. when it comes to strategies for the `IUpdater` where e.g. learning rate can be altered during training time). More complex networks will need to be implemented separately. At least these serves as a starting point.
 
 ### Backends 
-Currently the `pom.xml` specifies the backend `nd4j-native-platform` which only supports running CPU and bundles in C/C++ backends for most common platforms (Andriod, Windows, Linux, Intel-based Mac). If you intend to run on a single platform or has the possibility to run on GPU this can be changed in order to reduce size of the final JAR and facilitate faster training/predictions (see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information). 
+Currently the `pom.xml` specifies the `nd4j-native` (CPU based) backend, but runtime could be greatly reduced if the user has access to a CUDA/GPU backend, see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information. Note that this repo is mainly intended as proof of concept, and improvements can be likely be made at several points. 
 
 ### Tweaking parallization
 DL4J and ND4J tries to create as many threads as it think is optimal for using the available hardware, if you run other jobs on the same machine you may have to set the environment variables `OMP_NUM_THREADS` to not ceate too many threads which will be detrimental for performance instead, see further info at [Deeplearning4j performance issues](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends/performance-issues#step-13-check-omp_num_threads-performing-concurrent-inference-using-cpu-in-multiple-threads-simultan).
 
 ## Change log 
+
+**0.0.1-beta10**
+- Update Deeplearning4j version from `1.0.0-M1.1` to `1.0.0-M2.1`.
+- Update to CPSign `2.0.0-rc4`, now accessible from Maven central so no need to install locally - remove the `install_cpsign.sh` script for doing that.
+- Revised the build process by introducing two build profiles; thinjar and fatjar. 
+- Updated nd4j backend to run on OS X M1 chip (for users to update).
+
 
 **0.0.1-beta9**
 - Save labels from DLClassifier if needed, e.g. custom labels that are not 0,1,2,.. This means that old models will be loaded successfully given that they have default labels, and will give strange predictions if they were something else. Added a gihub issue to DL4J repo that `labels` are not serialized, hopefully this can be solved upstream.
@@ -122,7 +118,7 @@ DL4J and ND4J tries to create as many threads as it think is optimal for using t
 
 ## TODOs
 
-- [x] add `.install_cpsign.sh` script for installing to user local .m2 repo
+- [x] ~~add `.install_cpsign.sh` script for installing to user local .m2 repo~~ this is no longer used, cpsign is accessible from Maven Central.
 - [x] fix DLRegressor - tests/settings or what is the issue?
 - [x] fix failing tests (classification original parameters, regression)
 - [x] Create a first release version

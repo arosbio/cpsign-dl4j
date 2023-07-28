@@ -1,13 +1,57 @@
+<!--
+
+    Copyright (C) Aros Bio AB.
+
+    CPSign is an Open Source Software that is dual licensed to allow you to choose a license that best suits your requirements:
+
+    1) GPLv3 (GNU General Public License Version 3) with Additional Terms, including an attribution clause as well as a limitation to use the software for commercial purposes.
+
+    2) CPSign Proprietary License that allows you to use CPSign for commercial activities, such as in a revenue-generating operation or environment, or integrate CPSign in your proprietary software without worrying about disclosing the source code of your proprietary software, which is required if you choose to use the software under GPLv3 license. See arosbio.com/cpsign/commercial-license for details.
+
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.arosbio</groupId>
 	<artifactId>cpsign-dl4j</artifactId>
-	<version>0.0.1-beta11-SNAPSHOT</version> <!--  -->
+	<version>0.0.1-beta10-SNAPSHOT</version>
+	
+	<organization>
+		<name>Aros Bio</name>
+		<url>https://arosbio.com</url>
+  	</organization>
+	
+	<url>https://arosbio.com</url>
+	
+	<licenses>
+
+		<license>
+		<name>GPLv3 (GNU General Public License Version 3) with Additional Terms</name>
+		<comments>Non-commerical license</comments>
+		<url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+		<distribution>repo</distribution>
+		</license>
+
+		<license>
+		<name>Commercial license</name>
+		<url>https://arosbio.com/cpsign/commercial-license</url>
+		<distribution>repo</distribution>
+		</license>
+
+  	</licenses>
+
+	<developers>
+		<developer>
+		<name>Staffan Arvidsson McShane</name>
+		<email>staffan.arvidsson@gmail.com</email>
+		<organization>Pharmb.io</organization>
+		<organizationUrl>https://pharmb.io/</organizationUrl>
+		</developer>
+	</developers>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<cpsign.version>2.0.0-rc3</cpsign.version>
+		<cpsign.version>2.0.0-rc4</cpsign.version>
 		<dl4j.version>1.0.0-M2.1</dl4j.version>
     	<maven.compiler.source>11</maven.compiler.source>
     	<maven.compiler.target>11</maven.compiler.target>
@@ -27,11 +71,15 @@
 		<jfreechart.version>1.0.13</jfreechart.version>
 
 		
+		<!-- Here setting the names during the package phase - as we're both building a thin and fat jar -->
+		<thin.final.name>${project.artifactId}-${project.version}.jar</thin.final.name>
 
+		<!-- The name of the final 'fat jar' (excluding .jar as the shade plugin adds it by default) -->
+		<fat.final.name>${project.artifactId}-${project.version}-fatjar</fat.final.name>
 		<!-- Properties for the Manifest -->
 		<mf.impl.vendor>Aros Bio AB</mf.impl.vendor>
 		<main.class>com.arosbio.ml.dl4j.MainClass</main.class>
-		<!-- <main.class>com.arosbio.modeling.app.cli.CPSignApp</main.class>  Use this main class in case merging with main CPSign code -->
+		<fatjar.main.class>com.arosbio.cpsign.app.CPSignApp</fatjar.main.class>
 
 		<!-- Properties to supply at build time -->
 		<timestamp>${maven.build.timestamp}</timestamp>
@@ -111,20 +159,6 @@
 			<version>0.3.21-1.5.8</version>
 			<classifier>macosx-arm64</classifier>
 		</dependency>
-        
-        <!-- For plotting -->
-        <!-- 
-d        <dependency>
-            <groupId>jfree</groupId>
-            <artifactId>jfreechart</artifactId>
-            <version>${jfreechart.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jfree</groupId>
-            <artifactId>jcommon</artifactId>
-            <version>${jcommon.version}</version>
-        </dependency>
-         -->
 
 		<!-- TEST DEPENDENCIES -->
 		<dependency>
@@ -170,97 +204,161 @@ d        <dependency>
 				<version>${compiler.plugin.version}</version>
 			</plugin>
 
-			
 			<plugin>
           		<artifactId>maven-surefire-plugin</artifactId>
           		<version>${surefire.plugin.version}</version>
 			</plugin>
-			
-			<!--
-			 <plugin>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>${shade.version}</version>
-                <configuration>
-                    <shadedArtifactAttached>true</shadedArtifactAttached>
-                    <shadedClassifierName>bin</shadedClassifierName>
-                    <createDependencyReducedPom>true</createDependencyReducedPom>
-                    <finalName>cpsign-dl4j</finalName>
-                    <filters>
-                        <filter>
-                            <artifact>*:*</artifact>
-                            <excludes>
-                                <exclude>org/datanucleus/**</exclude>
-                                <exclude>META-INF/*.SF</exclude>
-                                <exclude>META-INF/*.DSA</exclude>
-                                <exclude>META-INF/*.RSA</exclude>
-                            </excludes>
-                        </filter>
-                    </filters>
-                </configuration>
-			</plugin>
-			-->
-
+			      <!-- License management: updates the header of source files only 
+      Run it using `mvn license:format` -->
+      
 			<plugin>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>${shade.plugin.version}</version>
+				<groupId>com.mycila</groupId>
+				<artifactId>license-maven-plugin</artifactId>
+				<version>4.1</version>
 				<configuration>
-					<shadedArtifactAttached>true</shadedArtifactAttached>
-					<shadedClassifierName>bin</shadedClassifierName>
-					<createDependencyReducedPom>true</createDependencyReducedPom>
-					<finalName>cpsign-dl4j</finalName>
-					<filters>
-						<filter>
-							<artifact>*:*</artifact>
-							<excludes>
-								<exclude>org/datanucleus/**</exclude>
-								<exclude>META-INF/*.SF</exclude>
-								<exclude>META-INF/*.DSA</exclude>
-								<exclude>META-INF/*.RSA</exclude>
-							</excludes>
-						</filter>
-					</filters>
+				<licenseSets>
+					<licenseSet>
+					<inlineHeader>
+Copyright (C) Aros Bio AB.
+
+CPSign is an Open Source Software that is dual licensed to allow you to choose a license that best suits your requirements:
+
+1) GPLv3 (GNU General Public License Version 3) with Additional Terms, including an attribution clause as well as a limitation to use the software for commercial purposes.
+
+2) CPSign Proprietary License that allows you to use CPSign for commercial activities, such as in a revenue-generating operation or environment, or integrate CPSign in your proprietary software without worrying about disclosing the source code of your proprietary software, which is required if you choose to use the software under GPLv3 license. See arosbio.com/cpsign/commercial-license for details.
+					</inlineHeader>
+
+					<excludes>
+						<exclude>**/README</exclude>
+						<exclude>*.md</exclude>
+						<exclude>src/test/resources/**</exclude>
+						<exclude>src/main/resources/**</exclude>
+						<exclude>**/*.txt</exclude>
+					</excludes>
+					</licenseSet>
+				</licenseSets>
+				
 				</configuration>
-
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-						<configuration>
-							<!-- If you remove the artifactSet below you will include the main CPSign code and build an Uber-jar including all required code for running 
-                        	everything from a single JAR-->
-                        	<artifactSet>
-                				<excludes>com.arosbio:confai</excludes>
-								<!--<excludes>com.arosbio:encrypt-api-->
-                			</artifactSet>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                                    <resource>reference.conf</resource>
-                                </transformer>
-                                <transformer
-									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<manifestEntries>
-										<Main-Class>${main.class}</Main-Class>
-
-										<Implementation-Title>Aros Bio ${project.artifactId}</Implementation-Title>
-										<Implementation-Version>${project.version}</Implementation-Version>
-										<Implementation-Vendor-Id>${mf.impl.vendor}</Implementation-Vendor-Id>
-										<X-Build-timestamp>${maven.build.timestamp}</X-Build-timestamp>
-									</manifestEntries>
-								</transformer>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
-								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer" />
-								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
-							</transformers>
-						</configuration>
-					</execution>
-				</executions>
 			</plugin>
-
-
 		</plugins>
+		
 	</build>
 
+	<profiles>
+		<!-- Building the thin jar when inclueded as transitive dependency -->
+		<profile>
+			<id>thinjar</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jar-plugin</artifactId>
+						<version>${jar.plugin.version}</version>
+						<configuration>
+							<archive>
+								<manifest>
+									<mainClass>${main.class}</mainClass>
+								</manifest>
+								<manifestEntries>
+									<Implementation-Title>Aros Bio ${project.artifactId}</Implementation-Title>
+									<Implementation-Version>${project.version}</Implementation-Version>
+									<Implementation-Vendor-Id>${mf.impl.vendor}</Implementation-Vendor-Id>
+									<X-Compile-Source-JDK>${maven.compiler.source}</X-Compile-Source-JDK>
+									<X-Compile-Target-JDK>${maven.compiler.target}</X-Compile-Target-JDK>
+								</manifestEntries>
+							</archive>
+						</configuration>
+					</plugin>
+				</plugins>
+
+			</build>
+		</profile>
+
+
+		<!-- Building the fat jar including CPSign CLI and all deps -->
+		<profile>
+			<id>fatjar</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+
+			<!-- Add additional dep for CPSign CLI -->
+			<dependencies>
+				<dependency>
+					<groupId>com.arosbio</groupId>
+					<artifactId>cpsign</artifactId>
+					<version>${cpsign.version}</version>
+				</dependency>
+			</dependencies>
+
+			<build>
+
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-shade-plugin</artifactId>
+						<version>${shade.plugin.version}</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<goals>
+									<goal>shade</goal>
+								</goals>
+								<configuration>
+									
+									<finalName>${fat.final.name}</finalName>
+									<createDependencyReducedPom>false</createDependencyReducedPom>
+
+									<!-- FILTERS -->
+									<filters>
+										<filter>
+											<artifact>*:*</artifact>
+											<excludes>
+												<exclude>org/datanucleus/**</exclude>
+												<exclude>META-INF/*.SF</exclude>
+												<exclude>META-INF/*.DSA</exclude>
+												<exclude>META-INF/*.RSA</exclude>
+											</excludes>
+										</filter>
+										<filter>
+											<artifact>*:*</artifact>
+											<excludes>
+												<exclude>header.txt</exclude>
+												<exclude>jena-*</exclude>
+												<exclude>log4j.properties</exclude>
+											</excludes>
+										</filter>
+									</filters>
+
+									<transformers>
+										<!-- Handles the external third party licenses -->
+										<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
+										<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+											<manifestEntries>
+												<Main-Class>${fatjar.main.class}</Main-Class>
+
+												<Implementation-Title>Aros Bio ${project.artifactId}</Implementation-Title>
+												<Implementation-Version>${project.version}</Implementation-Version>
+												<Implementation-Vendor-Id>${mf.impl.vendor}</Implementation-Vendor-Id>
+												<X-Compile-Source-JDK>${maven.compiler.source}</X-Compile-Source-JDK>
+												<X-Compile-Target-JDK>${maven.compiler.target}</X-Compile-Target-JDK>
+												<X-Build-timestamp>${maven.build.timestamp}</X-Build-timestamp>
+											</manifestEntries>
+										</transformer>
+										<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+										<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer" />
+									</transformers>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>
