@@ -1,7 +1,17 @@
+/*
+ * Copyright (C) Aros Bio AB.
+ *
+ * CPSign is an Open Source Software that is dual licensed to allow you to choose a license that best suits your requirements:
+ *
+ * 1) GPLv3 (GNU General Public License Version 3) with Additional Terms, including an attribution clause as well as a limitation to use the software for commercial purposes.
+ *
+ * 2) CPSign Proprietary License that allows you to use CPSign for commercial activities, such as in a revenue-generating operation or environment, or integrate CPSign in your proprietary software without worrying about disclosing the source code of your proprietary software, which is required if you choose to use the software under GPLv3 license. See arosbio.com/cpsign/commercial-license for details.
+ */
 package com.arosbio.ml.dl4j;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.Properties;
@@ -12,7 +22,21 @@ public class MainClass {
 	private final static String BUILD_VERSION_KEY = "build.version";
 	private final static String TIME_STAMP_KEY = "build.ts";
 
-	public static void main(String[] args) {
+	public static void main(String[] args) { 
+
+		// Check if CPSignApp is accessible - then forward call and args to it
+		try {
+			Class<?> mainCls = Class.forName("com.arosbio.cpsign.app.CPSignApp");
+			// If this didn't result in a failure, CPSign code should be accessible
+			Method mainMethod = mainCls.getMethod("main", String[].class);
+			mainMethod.invoke(null, (Object) args);
+			System.err.println("Invoked CPSignApp");
+			return;
+		} catch (Exception e){
+			// Not there
+		}
+
+		// Otherwise fall back to print the info about the extension 
 
 		// Get the build version and timestamp 
 		String v = null, ts = null;
