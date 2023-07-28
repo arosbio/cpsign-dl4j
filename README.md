@@ -118,6 +118,7 @@ DL4J and ND4J tries to create as many threads as it think is optimal for using t
 
 ## TODOs
 
+- [ ] Check if custom saving of labels is needed or not, after update https://github.com/deeplearning4j/deeplearning4j/pull/9666. Change would be to `saveToStream` and `loadFromStream` of [DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifier.java), if labels are now correctly serialized by DL4J. 
 - [x] ~~add `.install_cpsign.sh` script for installing to user local .m2 repo~~ this is no longer used, cpsign is accessible from Maven Central.
 - [x] fix DLRegressor - tests/settings or what is the issue?
 - [x] fix failing tests (classification original parameters, regression)
