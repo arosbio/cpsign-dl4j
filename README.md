@@ -1,5 +1,5 @@
 # CPSign DL4J extension <!-- omit in toc -->
-This repo contains an extension to [CPSign](https://arosbio.com), which adds the possibility to build DL models using the [Deeplearning4j library (DL4J)](https://deeplearning4j.konduit.ai/). The DL4J package is rather large and also has the possibility to use hardware acceleration when possible.
+This repo contains an extension to [CPSign](https://github.com/arosbio/cpsign), a cheminformatics tool developed and owned by [Aros bio](https://arosbio.com), which adds the possibility to build DL models using the [Deeplearning4j library (DL4J)](https://deeplearning4j.konduit.ai/). The DL4J package is rather large and also has the possibility to use hardware acceleration when possible.
 
 ## Table of Contents <!-- omit in toc -->
 - [License](#license)
@@ -12,7 +12,7 @@ This repo contains an extension to [CPSign](https://arosbio.com), which adds the
   - [Running from CLI](#running-from-cli)
 - [Performance notes](#performance-notes)
   - [Backends](#backends)
-  - [Tweaking parallization](#tweaking-parallization)
+  - [Tweaking parallelization](#tweaking-parallelization)
 - [Change log](#change-log)
 - [TODOs](#todos)
 
@@ -21,7 +21,7 @@ This repo contains an extension to [CPSign](https://arosbio.com), which adds the
 CPSign is dual licensed, where the user can choose between the [GNU General Public License](http://www.gnu.org/licenses/gpl-3.0.html) with additional terms (which can be found at the [Aros Bio website](https://arosbio.com/cpsign/license)) or a [commercial license](comm-license.txt). See further details at the [Aros Bio website](https://arosbio.com/cpsign/license).
 
 ## Building 
-This project uses Maven as build tool and depends on the `confai` module of [CPSign](https://github.com/arosbio/cpsign). The build specification [pom](pom.xml) is currently configured to run on CPU on OS X with M1 chip, and needs to be configured differently for different hardware, i.e. in case GPU/CUDA is available. see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information. The build should be tweaked in order to fit your intended usecase, for convenience we have supplied two build profiles [thinjar](#option-1-build-a-thin-jar) and [fatjar](#option-2-build-a-fat-jar) - the former should be useful in case you wish to incorporate `cpsign-dl4j` into another piece of software, and the latter is used for using directly on the CLI. Read more in each section for greater details.
+This project uses Maven as build tool and depends on the `confai` module of [CPSign](https://github.com/arosbio/cpsign). The build specification [pom](pom.xml) is currently configured to run on CPU on OS X with Apple Silicon chip, and needs to be configured differently for different hardware, i.e. in case GPU/CUDA is available. see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information. The build should be tweaked in order to fit your intended usecase, for convenience we have supplied two build profiles [thinjar](#option-1-build-a-thin-jar) and [fatjar](#option-2-build-a-fat-jar) - the former should be useful in case you wish to incorporate `cpsign-dl4j` into another piece of software, and the latter is used for using directly on the CLI. Read more in each section for greater details.
 
 ### Run unit-tests
 To verify that everything is working as it should, run unit tests using the standard:
@@ -58,7 +58,7 @@ The two algorithms ([DLClassifier](src/main/java/com/arosbio/ml/dl4j/DLClassifie
 ### Backends 
 Currently the `pom.xml` specifies the `nd4j-native` (CPU based) backend, but runtime could be greatly reduced if the user has access to a CUDA/GPU backend, see [ND4J Backends](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends) for more information. Note that this repo is mainly intended as proof of concept, and improvements can be likely be made at several points. 
 
-### Tweaking parallization
+### Tweaking parallelization
 DL4J and ND4J tries to create as many threads as it think is optimal for using the available hardware, if you run other jobs on the same machine you may have to set the environment variables `OMP_NUM_THREADS` to not ceate too many threads which will be detrimental for performance instead, see further info at [Deeplearning4j performance issues](https://deeplearning4j.konduit.ai/multi-project/explanation/configuration/backends/performance-issues#step-13-check-omp_num_threads-performing-concurrent-inference-using-cpu-in-multiple-threads-simultan).
 
 ## Change log 
@@ -67,7 +67,7 @@ DL4J and ND4J tries to create as many threads as it think is optimal for using t
 - Update Deeplearning4j version from `1.0.0-M1.1` to `1.0.0-M2.1`.
 - Update to CPSign `2.0.0-rc4`, now accessible from Maven central so no need to install locally - remove the `install_cpsign.sh` script for doing that.
 - Revised the build process by introducing two build profiles; thinjar and fatjar. 
-- Updated nd4j backend to run on OS X M1 chip (for users to update).
+- Updated nd4j backend to run on OS X with Apple Silicon chip (for users to update).
 
 
 **0.0.1-beta9**
@@ -115,7 +115,7 @@ DL4J and ND4J tries to create as many threads as it think is optimal for using t
   - Fraction of all training examples used as internal test-set, used for determining early stopping of the training (`testFrac`)
   - The updater used for updating weights in the network (`updater`)
   - The optimizer used for finding the gradient in the backprop, which is used together with the updater for updating the weights (`optimizer`)
-  - Specify the number of epochs to continue training the network after there is no more improvement in the loss score (`earlyStopAfter`). The calculation of the loss score can be done either on training examples or an internal test-set, which is controled by the `testFrac` parameter.
+  - Specify the number of epochs to continue training the network after there is no more improvement in the loss score (`earlyStopAfter`). The calculation of the loss score can be done either on training examples or an internal test-set, which is controlled by the `testFrac` parameter.
   - Weight decay, used for regularization (`weightDecay`)
   - Standard `l1` and `l2` regularization terms, to control the size of the weights
   - Both an `inputDropOut` and `dropOut` for hidden layers, which are set separately. 
